@@ -6,8 +6,8 @@
     "unitClass": "Sniper",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ClearSniper.jpg",
     "faction": "JP"
   },
   {
@@ -17,8 +17,8 @@
     "unitClass": "Ambush",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_32.jpg",
     "faction": "JP"
   },
   {
@@ -28,8 +28,8 @@
     "unitClass": "Barrage",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_33.jpg",
     "faction": "JP"
   },
   {
@@ -39,8 +39,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_34.jpg",
     "faction": "JP"
   },
   {
@@ -50,8 +50,8 @@
     "unitClass": "Sniper",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_35.jpg",
     "faction": "JP"
   },
   {
@@ -61,8 +61,8 @@
     "unitClass": "Ambush",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_36.jpg",
     "faction": "JP"
   },
   {
@@ -72,8 +72,8 @@
     "unitClass": "Barrage",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_37.jpg",
     "faction": "JP"
   },
   {
@@ -83,8 +83,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_38.jpg",
     "faction": "JP"
   },
   {
@@ -94,8 +94,8 @@
     "unitClass": "Sniper",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_54.jpg",
     "faction": "JP"
   },
   {
@@ -105,8 +105,8 @@
     "unitClass": "Ambush",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_53.jpg",
     "faction": "JP"
   },
   {
@@ -116,8 +116,8 @@
     "unitClass": "Barrage",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_52.jpg",
     "faction": "JP"
   },
   {
@@ -127,8 +127,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_51.jpg",
     "faction": "JP"
   },
   {
@@ -138,8 +138,8 @@
     "unitClass": "Sniper",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_50.jpg",
     "faction": "JP"
   },
   {
@@ -149,8 +149,8 @@
     "unitClass": "Ambush",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_49.jpg",
     "faction": "JP"
   },
   {
@@ -160,8 +160,8 @@
     "unitClass": "Barrage",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_48.jpg",
     "faction": "JP"
   },
   {
@@ -171,8 +171,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Clear",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ClearChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_47.jpg",
     "faction": "JP"
   },
   {
@@ -182,8 +182,8 @@
     "unitClass": "Sniper",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "Urban_Sniper5.jpg",
     "faction": "JP"
   },
   {
@@ -193,8 +193,8 @@
     "unitClass": "Ambush",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_24.jpg",
     "faction": "JP"
   },
   {
@@ -204,8 +204,8 @@
     "unitClass": "Barrage",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_25.jpg",
     "faction": "JP"
   },
   {
@@ -215,8 +215,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_26.jpg",
     "faction": "JP"
   },
   {
@@ -226,8 +226,8 @@
     "unitClass": "Elite",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_27.jpg",
     "faction": "JP"
   },
   {
@@ -237,8 +237,8 @@
     "unitClass": "Sniper",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_28.jpg",
     "faction": "JP"
   },
   {
@@ -248,8 +248,8 @@
     "unitClass": "Ambush",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_29.jpg",
     "faction": "JP"
   },
   {
@@ -259,8 +259,8 @@
     "unitClass": "Barrage",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_30.jpg",
     "faction": "JP"
   },
   {
@@ -270,8 +270,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_46.jpg",
     "faction": "JP"
   },
   {
@@ -281,8 +281,8 @@
     "unitClass": "Elite",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_45.jpg",
     "faction": "JP"
   },
   {
@@ -292,8 +292,8 @@
     "unitClass": "Sniper",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_39.jpg",
     "faction": "JP"
   },
   {
@@ -303,8 +303,8 @@
     "unitClass": "Ambush",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_43.jpg",
     "faction": "JP"
   },
   {
@@ -314,8 +314,8 @@
     "unitClass": "Barrage",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_60.jpg",
     "faction": "JP"
   },
   {
@@ -325,8 +325,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_41.jpg",
     "faction": "JP"
   },
   {
@@ -336,8 +336,8 @@
     "unitClass": "Elite",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_40.jpg",
     "faction": "JP"
   },
   {
@@ -347,8 +347,8 @@
     "unitClass": "Sniper",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_39.jpg",
     "faction": "JP"
   },
   {
@@ -358,8 +358,8 @@
     "unitClass": "Ambush",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_43.jpg",
     "faction": "JP"
   },
   {
@@ -369,8 +369,8 @@
     "unitClass": "Barrage",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_60.jpg",
     "faction": "JP"
   },
   {
@@ -380,8 +380,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_41.jpg",
     "faction": "JP"
   },
   {
@@ -391,8 +391,8 @@
     "unitClass": "Elite",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_40.jpg",
     "faction": "JP"
   },
   {
@@ -402,8 +402,8 @@
     "unitClass": "Sniper",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_63.jpg",
     "faction": "JP"
   },
   {
@@ -413,8 +413,8 @@
     "unitClass": "Ambush",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_64.jpg",
     "faction": "JP"
   },
   {
@@ -424,8 +424,8 @@
     "unitClass": "Barrage",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_65.jpg",
     "faction": "JP"
   },
   {
@@ -435,8 +435,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_66.jpg",
     "faction": "JP"
   },
   {
@@ -446,8 +446,8 @@
     "unitClass": "Elite",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_82.jpg",
     "faction": "JP"
   },
   {
@@ -457,8 +457,8 @@
     "unitClass": "Sniper",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_sniper.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_81.jpg",
     "faction": "JP"
   },
   {
@@ -468,8 +468,8 @@
     "unitClass": "Ambush",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_80.jpg",
     "faction": "JP"
   },
   {
@@ -479,8 +479,8 @@
     "unitClass": "Barrage",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_79.jpg",
     "faction": "JP"
   },
   {
@@ -490,8 +490,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_78.jpg",
     "faction": "JP"
   },
   {
@@ -501,8 +501,8 @@
     "unitClass": "Elite",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_77.jpg",
     "faction": "JP"
   },
   {
@@ -512,8 +512,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_76.jpg",
     "faction": "JP"
   },
   {
@@ -523,8 +523,8 @@
     "unitClass": "Elite",
     "terrainType": "Urban",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_31.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_75.jpg",
     "faction": "JP"
   },
   {
@@ -534,8 +534,8 @@
     "unitClass": "Ambush",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_67.jpg",
     "faction": "JP"
   },
   {
@@ -545,8 +545,8 @@
     "unitClass": "Barrage",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_68.jpg",
     "faction": "JP"
   },
   {
@@ -556,8 +556,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_69.jpg",
     "faction": "JP"
   },
   {
@@ -567,8 +567,8 @@
     "unitClass": "Elite",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_70.jpg",
     "faction": "JP"
   },
   {
@@ -578,8 +578,8 @@
     "unitClass": "Ambush",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_71.jpg",
     "faction": "JP"
   },
   {
@@ -589,8 +589,8 @@
     "unitClass": "Barrage",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_72.jpg",
     "faction": "JP"
   },
   {
@@ -600,8 +600,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_73.jpg",
     "faction": "JP"
   },
   {
@@ -611,8 +611,8 @@
     "unitClass": "Elite",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_74.jpg",
     "faction": "JP"
   },
   {
@@ -622,8 +622,8 @@
     "unitClass": "Ambush",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_90.jpg",
     "faction": "JP"
   },
   {
@@ -633,8 +633,8 @@
     "unitClass": "Barrage",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_89.jpg",
     "faction": "JP"
   },
   {
@@ -644,8 +644,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_88.jpg",
     "faction": "JP"
   },
   {
@@ -655,8 +655,8 @@
     "unitClass": "Elite",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_87.jpg",
     "faction": "JP"
   },
   {
@@ -666,8 +666,8 @@
     "unitClass": "Ambush",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_ambush.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_86.jpg",
     "faction": "JP"
   },
   {
@@ -677,8 +677,8 @@
     "unitClass": "Barrage",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_barrage.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_85.jpg",
     "faction": "JP"
   },
   {
@@ -688,8 +688,8 @@
     "unitClass": "Fanatic",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_fanatic.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_84.jpg",
     "faction": "JP"
   },
   {
@@ -699,8 +699,8 @@
     "unitClass": "Elite",
     "terrainType": "Fort",
     "status": "hidden",
-    "frontImage": "jp_back.jpg",
-    "backImage": "jp_elite.jpg",
+    "frontImage": "FortChit.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_83.jpg",
     "faction": "JP"
   }
 ]

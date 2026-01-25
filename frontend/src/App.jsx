@@ -3,6 +3,7 @@ import { Stage, Layer, Image as KonvaImage, Line, Text, Group, Rect } from 'reac
 import Konva from 'konva';
 import useImage from 'use-image';
 import unitsData from './units_data.json';
+import japaneseUnitsData from './japanese_units_data.json';
 import mapData from './map_data.json';
 
 // High-DPI setting
@@ -16,6 +17,8 @@ const UnitCounter = ({ unit, x, y, onDragEnd, onToggleStatus }) => {
     const [backImg] = useImage(unit.backImage ? `/images/${unit.backImage}` : null);
 
     // Determine current image based on status
+    // For US: fresh=front, spent=back(or dim front)
+    // For JP: fresh(hidden)=front(chit), spent(revealed)=back(unit) - abusing 'spent' for 'revealed' temporarily for demo
     const isSpent = unit.status === 'spent';
 
     // Use back image if spent and available, otherwise fallback to front
@@ -25,7 +28,7 @@ const UnitCounter = ({ unit, x, y, onDragEnd, onToggleStatus }) => {
         <Group
             x={x}
             y={y}
-            draggable={!isSpent} // Disable drag if spent
+            draggable={!isSpent} // Note: JP units might need to be dragable even if revealed? For now standard rule.
             onDragEnd={(e) => {
                 onDragEnd(unit.id, e.target.x(), e.target.y());
             }}
@@ -43,13 +46,13 @@ const UnitCounter = ({ unit, x, y, onDragEnd, onToggleStatus }) => {
                 offsetX={-3}
                 offsetY={-3}
             />
-            {/* Visual cue for spent state if using front image fallback, or just simpler border */}
+            {/* Visual cue for spent/selected state */}
             <Rect
                 width={UNIT_SIZE}
                 height={UNIT_SIZE}
                 fill="#dcb"
-                stroke={isSpent ? "gray" : "black"}
-                strokeWidth={isSpent ? 4 : 2}
+                stroke={isSpent ? "red" : "black"}
+                strokeWidth={isSpent ? 2 : 1}
             />
 
             {currentImage ? (
@@ -57,7 +60,7 @@ const UnitCounter = ({ unit, x, y, onDragEnd, onToggleStatus }) => {
                     image={currentImage}
                     width={UNIT_SIZE}
                     height={UNIT_SIZE}
-                    opacity={isSpent && !backImg ? 0.6 : 1} // Dim if no back image
+                    opacity={1}
                 />
             ) : (
                 <Text text={unit.name} fontSize={14} width={UNIT_SIZE} padding={5} />
@@ -106,13 +109,14 @@ function App() {
     useEffect(() => {
         // Initialize units with default positions (e.g., stacked in Area 4 for testing)
         // Area 4 is roughly at 2800, 500 based on map_data.json
-        const initialUnits = unitsData.map((u, index) => ({
+        const initialUSUnits = unitsData.map((u, index) => ({
             ...u,
             x: 2800 + (index % 5) * 110, // Wider grid for larger units
             y: 500 + Math.floor(index / 5) * 110,
             status: 'fresh' // Default status
         }));
-        setUnits(initialUnits);
+        // Japanese units are hidden by default until Start Game is clicked.
+        setUnits(initialUSUnits);
     }, []);
 
     // Restore effects and handlers
@@ -191,6 +195,126 @@ function App() {
         console.log("End Phase: All units recovered to Fresh status.");
     };
 
+    // Helper to calculate centroid of a polygon
+    const getCentroid = (points) => {
+        let x = 0, y = 0, n = points.length / 2;
+        for (let i = 0; i < points.length; i += 2) {
+            x += points[i];
+            y += points[i + 1];
+        }
+        return { x: x / n, y: y / n };
+    };
+
+    const handleStartGame = () => {
+        // 1. Separate JP units by terrain
+        const pools = {
+            Clear: japaneseUnitsData.filter(u => u.terrainType === 'Clear'),
+            Urban: japaneseUnitsData.filter(u => u.terrainType === 'Urban'),
+            Fort: japaneseUnitsData.filter(u => u.terrainType === 'Fort')
+        };
+
+        // Shuffle pools
+        const shuffle = (array) => {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        };
+
+        Object.keys(pools).forEach(key => shuffle(pools[key]));
+
+        // 2. Map areas to placement
+        // We need to know which areas accept which terrain units.
+        // Assuming map_data.json 'terrain' field matches 'Clear', 'Urban', 'Fort'.
+        // And we place 1 unit per area if available.
+
+        const newUnits = [];
+
+        // Setup US Units (Based on updated units_data.json)
+        const usUnits = [];
+        const areaCounters = { "Area 1": 0, "Area 2": 0, "Area 30": 0 };
+
+        unitsData.forEach((u) => {
+            if (u.startArea === "Reinforcements" || !u.startArea) {
+                // Not on map initially
+                // We could place them in a box off-screen or just hide them.
+                // Let's place them in a visible "Reinforcement Box" area (e.g. bottom right)
+                usUnits.push({
+                    ...u,
+                    x: 4000 + (usUnits.length % 5) * 110, // Far off map
+                    y: 3000 + Math.floor(usUnits.length / 5) * 110,
+                    status: 'fresh'
+                });
+            } else {
+                // Place in specific area
+                const areaName = u.startArea;
+                const area = mapData.find(a => a.name === areaName);
+
+                if (area) {
+                    const center = getCentroid(area.points);
+                    // Offset based on count to stack/grid them
+                    const count = areaCounters[areaName] || 0;
+                    const offsetX = (count % 4) * (UNIT_SIZE + 10) - 100; // Grid layout
+                    const offsetY = Math.floor(count / 4) * (UNIT_SIZE + 10) - 50;
+
+                    usUnits.push({
+                        ...u,
+                        x: center.x + offsetX,
+                        y: center.y + offsetY,
+                        status: 'fresh'
+                    });
+
+                    areaCounters[areaName] = count + 1;
+                } else {
+                    // Fallback
+                    usUnits.push({
+                        ...u,
+                        x: 2800,
+                        y: 500,
+                        status: 'fresh'
+                    });
+                }
+            }
+        });
+
+        newUnits.push(...usUnits);
+
+        // Setup JP Units
+        // Iterate through all map areas
+        const usStartAreas = ["Area 1", "Area 2", "Area 30", "Reinforcements"];
+
+        mapData.forEach(area => {
+            // Check if this area needs a unit
+            // Rule check: All areas? Or specific ones?
+            // User said: "map on corresponding terrain icon having areas"
+            // For now, if the area has a terrain type matching our pools, we try to place one.
+
+            // EXCLUDE US START AREAS to prevent immediate melee
+            if (usStartAreas.includes(area.name)) {
+                return;
+            }
+
+            const terrain = area.terrain; // "Clear", "Urban", "Fort", etc.
+
+            if (pools[terrain] && pools[terrain].length > 0) {
+                const unit = pools[terrain].pop();
+                const center = getCentroid(area.points);
+
+                // Add unit with position
+                newUnits.push({
+                    ...unit,
+                    x: center.x - UNIT_SIZE / 2, // Centering adjustments
+                    y: center.y - UNIT_SIZE / 2,
+                    status: 'fresh' // fresh = hidden/chit side
+                });
+            }
+        });
+
+        setUnits(newUnits);
+        console.log("Game Started: Units distributed.");
+    };
+
     return (
         <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#222' }}>
             {/* UI Overlay */}
@@ -233,7 +357,23 @@ function App() {
                 </div>
 
                 {/* Action Buttons */}
-                <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid #555' }}>
+                <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid #555', display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                    <button
+                        onClick={handleStartGame}
+                        style={{
+                            width: '100%',
+                            padding: '10px',
+                            background: '#d32f2f', // Red for Start
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        Start Game
+                    </button>
                     <button
                         onClick={handleEndPhase}
                         style={{

@@ -8,26 +8,59 @@ import mapData from './map_data.json';
 // High-DPI setting
 Konva.pixelRatio = window.devicePixelRatio || 1;
 
-const UnitCounter = ({ unit, x, y, onDragEnd }) => {
-    const [image] = useImage(`/images/${unit.frontImage}`); // Assuming images are in public/images/
+const UNIT_SIZE = 100;
+
+const UnitCounter = ({ unit, x, y, onDragEnd, onToggleStatus }) => {
+    // Load both images to prevent flickering when flipping
+    const [frontImg] = useImage(`/images/${unit.frontImage}`);
+    const [backImg] = useImage(unit.backImage ? `/images/${unit.backImage}` : null);
+
+    // Determine current image based on status
+    const isSpent = unit.status === 'spent';
+
+    // Use back image if spent and available, otherwise fallback to front
+    const currentImage = (isSpent && backImg) ? backImg : frontImg;
 
     return (
         <Group
             x={x}
             y={y}
-            draggable
+            draggable={!isSpent} // Disable drag if spent
             onDragEnd={(e) => {
                 onDragEnd(unit.id, e.target.x(), e.target.y());
             }}
+            onDblClick={(e) => {
+                e.cancelBubble = true; // Prevent stage events
+                onToggleStatus(unit.id);
+            }}
         >
             {/* Shadow/Border for visibility */}
-            <Rect width={50} height={50} fill="black" opacity={0.3} offsetX={-2} offsetY={-2} />
-            <Rect width={50} height={50} fill="#dcb" stroke="black" strokeWidth={1} />
+            <Rect
+                width={UNIT_SIZE}
+                height={UNIT_SIZE}
+                fill="black"
+                opacity={0.3}
+                offsetX={-3}
+                offsetY={-3}
+            />
+            {/* Visual cue for spent state if using front image fallback, or just simpler border */}
+            <Rect
+                width={UNIT_SIZE}
+                height={UNIT_SIZE}
+                fill="#dcb"
+                stroke={isSpent ? "gray" : "black"}
+                strokeWidth={isSpent ? 4 : 2}
+            />
 
-            {image ? (
-                <KonvaImage image={image} width={50} height={50} />
+            {currentImage ? (
+                <KonvaImage
+                    image={currentImage}
+                    width={UNIT_SIZE}
+                    height={UNIT_SIZE}
+                    opacity={isSpent && !backImg ? 0.6 : 1} // Dim if no back image
+                />
             ) : (
-                <Text text={unit.name} fontSize={10} width={50} padding={5} />
+                <Text text={unit.name} fontSize={14} width={UNIT_SIZE} padding={5} />
             )}
         </Group>
     );
@@ -75,8 +108,9 @@ function App() {
         // Area 4 is roughly at 2800, 500 based on map_data.json
         const initialUnits = unitsData.map((u, index) => ({
             ...u,
-            x: 2800 + (index % 5) * 55, // Simple grid layout
-            y: 500 + Math.floor(index / 5) * 55
+            x: 2800 + (index % 5) * 110, // Wider grid for larger units
+            y: 500 + Math.floor(index / 5) * 110,
+            status: 'fresh' // Default status
         }));
         setUnits(initialUnits);
     }, []);
@@ -138,8 +172,23 @@ function App() {
     };
 
     const handleUnitDragEnd = (id, newX, newY) => {
-        setUnits(units.map(u => u.id === id ? { ...u, x: newX, y: newY } : u));
+        // Update position AND set status to spent on movement completion
+        setUnits(units.map(u => u.id === id ? { ...u, x: newX, y: newY, status: 'spent' } : u));
         console.log(`Moved unit ${id} to ${newX}, ${newY}`);
+    };
+
+    const handleUnitToggleStatus = (id) => {
+        setUnits(units.map(u => {
+            if (u.id === id) {
+                return { ...u, status: u.status === 'fresh' ? 'spent' : 'fresh' };
+            }
+            return u;
+        }));
+    };
+
+    const handleEndPhase = () => {
+        setUnits(units.map(u => ({ ...u, status: 'fresh' })));
+        console.log("End Phase: All units recovered to Fresh status.");
     };
 
     return (
@@ -179,7 +228,28 @@ function App() {
                     )}
                 </div>
                 <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#888' }}>
-                    Wheel to zoom, Drag to pan
+                    Wheel to zoom, Drag to pan<br />
+                    Double-click unit to flip
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid #555' }}>
+                    <button
+                        onClick={handleEndPhase}
+                        style={{
+                            width: '100%',
+                            padding: '10px',
+                            background: '#0066cc',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        End Phase
+                    </button>
                 </div>
             </div>
 
@@ -231,6 +301,7 @@ function App() {
                             x={unit.x}
                             y={unit.y}
                             onDragEnd={handleUnitDragEnd}
+                            onToggleStatus={handleUnitToggleStatus}
                         />
                     ))}
                 </Layer>

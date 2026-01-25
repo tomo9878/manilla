@@ -1,0 +1,261 @@
+[
+  {
+    "id": "1C_1-5",
+    "name": "1C_1-5",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_103.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_102.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_1-12",
+    "name": "1C_1-12",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_104.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_101.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_Chase",
+    "name": "1C_Chase",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_105.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_100.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_2-7",
+    "name": "1C_2-7",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_106.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_99.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_2-8",
+    "name": "1C_2-8",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_107.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_98.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_Hoffman",
+    "name": "1C_Hoffman",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_108.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_97.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_44A",
+    "name": "1C_44A",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_159.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_150.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_44B",
+    "name": "1C_44B",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_160.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_149.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_44D",
+    "name": "1C_44D",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_161.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_148.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_302rcn",
+    "name": "1C_302rcn",
+    "frontImage": "ManilaVassalCounterCutTemplateFront_162.jpg",
+    "backImage": "ManilaVassalCounterCutTemplateFront_147.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_1-129",
+    "name": "37_1-129",
+    "frontImage": "us_37_1-129.jpg",
+    "backImage": "us_37_1-129_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_2-129",
+    "name": "37_2-129",
+    "frontImage": "us_37_2-129.jpg",
+    "backImage": "us_37_2-129_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_3-129",
+    "name": "37_3-129",
+    "frontImage": "us_37_3-129.jpg",
+    "backImage": "us_37_3-129_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_Fredrick",
+    "name": "37_Fredrick",
+    "frontImage": "us_37_Fredrick.jpg",
+    "backImage": "us_37_Fredrick_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_1-145",
+    "name": "37_1-145",
+    "frontImage": "us_37_1-145.jpg",
+    "backImage": "us_37_1-145_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_2-145",
+    "name": "37_2-145",
+    "frontImage": "us_37_2-145.jpg",
+    "backImage": "us_37_2-145_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_3-145",
+    "name": "37_3-145",
+    "frontImage": "us_37_3-145.jpg",
+    "backImage": "us_37_3-145_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_Whitcomb",
+    "name": "37_Whitcomb",
+    "frontImage": "us_37_Whitcomb.jpg",
+    "backImage": "us_37_Whitcomb_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_1-148",
+    "name": "37_1-148",
+    "frontImage": "us_37_1-148.jpg",
+    "backImage": "us_37_1-148_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_2-148",
+    "name": "37_2-148",
+    "frontImage": "us_37_2-148.jpg",
+    "backImage": "us_37_2-148_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_3-148",
+    "name": "37_3-148",
+    "frontImage": "us_37_3-148.jpg",
+    "backImage": "us_37_3-148_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_White",
+    "name": "37_White",
+    "frontImage": "us_37_White.jpg",
+    "backImage": "us_37_White_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-1-187",
+    "name": "11-1-187",
+    "frontImage": "us_11_1-187.jpg",
+    "backImage": "us_11_1-187_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-2-187",
+    "name": "11-2-187",
+    "frontImage": "us_11_2-187.jpg",
+    "backImage": "us_11_2-187_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-Hildebrand",
+    "name": "11-Hildebrand",
+    "frontImage": "us_11_Hildebrand.jpg",
+    "backImage": "us_11_Hildebrand_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-1-188",
+    "name": "11-1-188",
+    "frontImage": "us_11_1-188.jpg",
+    "backImage": "us_11_1-188_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-2-188",
+    "name": "11-2-188",
+    "frontImage": "us_11_2-188.jpg",
+    "backImage": "us_11_2-188_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-Soule",
+    "name": "11-Soule",
+    "frontImage": "us_Soule.jpg",
+    "backImage": "us_11_Soule_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-1-511",
+    "name": "11-1-511",
+    "frontImage": "us_11_1-511.jpg",
+    "backImage": "us_11_1-511_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-2-511",
+    "name": "11-2-511",
+    "frontImage": "us_11_2-511.jpg",
+    "backImage": "us_11_2-511_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-3-511",
+    "name": "11-3-511",
+    "frontImage": "us_11_3-511.jpg",
+    "backImage": "us_11_3-511_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "11-Haugen",
+    "name": "11-Haugen",
+    "frontImage": "us_11_Hauges.jpg",
+    "backImage": "us_11_Haugen_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "1C_754B",
+    "name": "1C_754B",
+    "frontImage": "us_1C_754B.jpg",
+    "backImage": "us_1C_754B_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_637A",
+    "name": "37_637A",
+    "frontImage": "us_37_637A.jpg",
+    "backImage": "us_37_637A_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_637B",
+    "name": "37_637B",
+    "frontImage": "us_37_637B.jpg",
+    "backImage": "us_37_637B_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_637C",
+    "name": "37_637C",
+    "frontImage": "us_37_637C.jpg",
+    "backImage": "us_37_637C_back.jpg",
+    "faction": "US"
+  },
+  {
+    "id": "37_754A",
+    "name": "37_754A",
+    "frontImage": "us_37_754A.jpg",
+    "backImage": "us_37_754A_back.jpg",
+    "faction": "US"
+  }
+]

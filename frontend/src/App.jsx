@@ -1,20 +1,50 @@
 import { useState, useEffect } from 'react';
 import { Stage, Layer, Image as KonvaImage, Line, Text, Group, Rect } from 'react-konva';
+import Konva from 'konva';
 import useImage from 'use-image';
+import unitsData from './units_data.json';
 import mapData from './map_data.json';
 
+// High-DPI setting
+Konva.pixelRatio = window.devicePixelRatio || 1;
+
+const UnitCounter = ({ unit, x, y, onDragEnd }) => {
+    const [image] = useImage(`/images/${unit.frontImage}`); // Assuming images are in public/images/
+
+    return (
+        <Group
+            x={x}
+            y={y}
+            draggable
+            onDragEnd={(e) => {
+                onDragEnd(unit.id, e.target.x(), e.target.y());
+            }}
+        >
+            {/* Shadow/Border for visibility */}
+            <Rect width={50} height={50} fill="black" opacity={0.3} offsetX={-2} offsetY={-2} />
+            <Rect width={50} height={50} fill="#dcb" stroke="black" strokeWidth={1} />
+
+            {image ? (
+                <KonvaImage image={image} width={50} height={50} />
+            ) : (
+                <Text text={unit.name} fontSize={10} width={50} padding={5} />
+            )}
+        </Group>
+    );
+};
+
 const MapImage = ({ onImageLoad }) => {
+    // ... existing MapImage code ...
     const [image, status] = useImage('/map.jpg');
 
     useEffect(() => {
         if (image) {
-            console.log("Image successfully loaded", image.width, image.height);
-            onImageLoad({ width: image.width, height: image.height });
+            console.log("Image loaded effect");
+            // The map data coordinates go up to ~4935x3825
+            // We should scale the image to match this 'world' size so polygons align.
+            onImageLoad({ width: 4935, height: 3825 });
         }
-        if (status === 'failed') {
-            console.error("Failed to load map image");
-        }
-    }, [image, status, onImageLoad]);
+    }, [image]); // Remove onImageLoad from dependencies to break loop
 
     if (status === 'loading') {
         return <Text text="Loading Map Image..." fill="white" fontSize={40} x={100} y={100} />;
@@ -23,7 +53,8 @@ const MapImage = ({ onImageLoad }) => {
         return <Text text="Failed to load /map.jpg" fill="red" fontSize={40} x={100} y={100} />;
     }
 
-    return <KonvaImage image={image} />;
+    // Force the image to stretch to the specific world coordinates
+    return <KonvaImage image={image} width={4935} height={3825} />;
 };
 
 function App() {
@@ -32,10 +63,25 @@ function App() {
     const [scale, setScale] = useState(0.25); // Zoom out a bit more initially
     const [position, setPosition] = useState({ x: 0, y: 0 });
 
+    const [units, setUnits] = useState([]);
+
+    // Restore missing state
     const [selectedArea, setSelectedArea] = useState(null);
     const [hoveredArea, setHoveredArea] = useState(null);
     const [backendStatus, setBackendStatus] = useState('Checking...');
 
+    useEffect(() => {
+        // Initialize units with default positions (e.g., stacked in Area 4 for testing)
+        // Area 4 is roughly at 2800, 500 based on map_data.json
+        const initialUnits = unitsData.map((u, index) => ({
+            ...u,
+            x: 2800 + (index % 5) * 55, // Simple grid layout
+            y: 500 + Math.floor(index / 5) * 55
+        }));
+        setUnits(initialUnits);
+    }, []);
+
+    // Restore effects and handlers
     useEffect(() => {
         const handleResize = () => {
             setStageSize({ width: window.innerWidth, height: window.innerHeight });
@@ -91,6 +137,11 @@ function App() {
         setPosition(newPos);
     };
 
+    const handleUnitDragEnd = (id, newX, newY) => {
+        setUnits(units.map(u => u.id === id ? { ...u, x: newX, y: newY } : u));
+        console.log(`Moved unit ${id} to ${newX}, ${newY}`);
+    };
+
     return (
         <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#222' }}>
             {/* UI Overlay */}
@@ -142,7 +193,10 @@ function App() {
                 x={position.x}
                 y={position.y}
                 onDragEnd={(e) => {
-                    setPosition({ x: e.target.x(), y: e.target.y() });
+                    // Only update stage position if the stage itself was dragged
+                    if (e.target === e.target.getStage()) {
+                        setPosition({ x: e.target.x(), y: e.target.y() });
+                    }
                 }}
             >
                 <Layer imageSmoothingEnabled={false}>
@@ -166,6 +220,17 @@ function App() {
                             }}
                             onClick={() => setSelectedArea(area)}
                             onTap={() => setSelectedArea(area)}
+                        />
+                    ))}
+
+                    {/* Units */}
+                    {units.map((unit) => (
+                        <UnitCounter
+                            key={unit.id}
+                            unit={unit}
+                            x={unit.x}
+                            y={unit.y}
+                            onDragEnd={handleUnitDragEnd}
                         />
                     ))}
                 </Layer>

@@ -6,28 +6,33 @@ class TestCombatLogic(unittest.TestCase):
     def setUp(self):
         self.logic = GameLogic()
 
-    def test_overrun_check(self):
-        """Test Overrun conditions."""
+    def test_combat_resolution(self):
+        """Test Combat Resolution structure."""
+        # AT = 10, DF = 2, Mod = 0
+        # Min Roll for AT: 10 + 2 = 12
+        # Max Roll for DT: 2 + 0 + 0 + 12 = 14
+        # It's possible to fail (12 vs 14).
+        # It's possible to overrun (AT 22 vs DT 4 -> Diff 18 > DF 2).
         
-        # 1. Success but no overrun (Diff < DF)
-        # AT=10, DT=5, Diff=5. Defender DF=6.
-        # 5 > 0 (Success), but 5 < 6 (No Overrun).
-        res = self.logic.process_overrun_check(10, 5, 6)
-        self.assertTrue(res['is_success'])
-        self.assertFalse(res['is_overrun'])
+        res = self.logic.process_combat(10, 2, 0, 0)
         
-        # 2. Overrun (Diff > DF)
-        # AT=10, DT=3, Diff=7. Defender DF=6.
-        # 7 > 6 (Overrun).
-        res = self.logic.process_overrun_check(10, 3, 6)
-        self.assertTrue(res['is_success'])
-        self.assertTrue(res['is_overrun'])
+        self.assertIn('at_roll', res)
+        self.assertIn('dt_roll', res)
+        self.assertIn('is_success', res)
+        self.assertIn('is_overrun', res)
         
-        # 3. Failed attack
-        # AT=3, DT=5, Diff=-2.
-        res = self.logic.process_overrun_check(3, 5, 6)
-        self.assertFalse(res['is_success'])
-        self.assertFalse(res['is_overrun'])
+        # Verify calculation consistency
+        at_total = 10 + res['at_roll']
+        dt_total = 2 + 0 + 0 + res['dt_roll']
+        self.assertEqual(res['at_total'], at_total)
+        self.assertEqual(res['dt_total'], dt_total)
+        
+        diff = at_total - dt_total
+        self.assertEqual(res['diff'], diff)
+        
+        if res['is_overrun']:
+            self.assertTrue(res['is_success'])
+            self.assertTrue(diff > 2) # DF was 2
 
     def test_end_combat_phase(self):
         """Test resetting units and morale drop."""

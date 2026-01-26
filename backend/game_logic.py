@@ -1,5 +1,6 @@
 import json
 import os
+import random
 
 class GameLogic:
     def __init__(self):
@@ -489,49 +490,69 @@ class GameLogic:
             "logs": logs
         }
 
-    def process_overrun_check(self, attack_total, defense_total, defender_df):
+    def process_combat(self, attack_val, defense_val, terrain_mod, strategy_mod, is_night_attack=False):
         """
-        Determines if an Overrun occurs based on combat values.
-        Rule: Overrun occurs if Result is Success AND (AT - DT) > Defender DF.
-        Assumption: 'Success' typically means AT > DT.
+        Executes Combat Resolution (AT vs DT).
         
         Args:
-            attack_total (int): Total Attack Factors (after shifts).
-            defense_total (int): Total Defense Factors (Terrain + Units).
-            defender_df (int): Defense Factor of the defending unit structure (Japanese DF).
+            attack_val (int): US Attack Value (Sum of factors).
+            defense_val (int): JP Defense Value (Base DF).
+            terrain_mod (int): Terrain modifier to DEFENSE (e.g. +2 for Urban).
+            strategy_mod (int): Strategy modifier to DEFENSE (if applicable).
+            is_night_attack (bool): If true, some rules might apply (not fully specified yet).
             
         Returns:
             dict: {
-                "diff": int,
+                "at_roll": int,
+                "dt_roll": int,
+                "at_total": int,
+                "dt_total": int,
                 "is_success": bool,
                 "is_overrun": bool,
-                "log": str
+                "logs": list
             }
         """
-        diff = attack_total - defense_total
+        logs = []
         
-        # Determine Success (Generic rule: Attacker > Defender)
-        # In many CRT systems, specific odds are needed, but for Overrun calculation:
+        # Roll 2d6 for Attack
+        d1, d2 = random.randint(1, 6), random.randint(1, 6)
+        at_roll = d1 + d2
+        at_total = attack_val + at_roll
+        
+        # Roll 2d6 for Defense
+        d3, d4 = random.randint(1, 6), random.randint(1, 6)
+        dt_roll = d3 + d4
+        dt_total = defense_val + terrain_mod + strategy_mod + dt_roll
+        
+        logs.append(f"Combat Resolution:")
+        logs.append(f"  US Attack: AV {attack_val} + Roll {at_roll} ({d1}+{d2}) = {at_total}")
+        logs.append(f"  JP Defense: DF {defense_val} + Terrain {terrain_mod} + Strategy {strategy_mod} + Roll {dt_roll} ({d3}+{d4}) = {dt_total}")
+        
+        diff = at_total - dt_total
         is_success = diff > 0
-        
         is_overrun = False
-        if is_success:
-            if diff > defender_df:
-                is_overrun = True
         
-        log_msg = f"Combat Stats: AT {attack_total} vs DT {defense_total} (Diff {diff}). Defender DF {defender_df}."
-        if is_overrun:
-            log_msg += " -> OVERRUN! (Diff > DF)"
-        elif is_success:
-            log_msg += " -> Success (No Overrun)"
+        # Overrun Condition: (AT - DT) > Defender Base DF?
+        # User said: "Success (Victory) ... AND (AT - DT) > Defender Defense Factor" -> Overrun.
+        # Defender Defense Factor is defense_val (Base).
+        if is_success:
+            if diff > defense_val:
+                is_overrun = True
+                logs.append(f"  Result: OVERRUN! (Diff {diff} > Base DF {defense_val})")
+            else:
+                logs.append(f"  Result: Success (JP Eliminated)")
         else:
-            log_msg += " -> Failed/Stalemate"
-            
+             logs.append(f"  Result: Failed (Stalemate/Repulse)")
+             
         return {
+            "at_roll": at_roll,
+            "dt_roll": dt_roll,
+            "at_total": at_total,
+            "dt_total": dt_total,
             "diff": diff,
             "is_success": is_success,
             "is_overrun": is_overrun,
-            "log": log_msg
+            "logs": logs
         }
 
     def process_end_combat_phase(self, units, morale):

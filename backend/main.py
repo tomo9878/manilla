@@ -109,20 +109,25 @@ def run_bloody_streets_check(data: BloodyStreetsRequest):
     return result
 
 
-class OverrunCheckRequest(BaseModel):
-    attackTotal: int
-    defenseTotal: int
-    defenderDF: int
 
-@app.post("/api/combat/overrun_check")
-def run_overrun_check(data: OverrunCheckRequest):
+class ResolveCombatRequest(BaseModel):
+    attackValue: int
+    defenseValue: int
+    terrainMod: int = 0
+    strategyMod: int = 0
+    isNight: bool = False
+
+@app.post("/api/combat/resolve")
+def run_combat_resolution(data: ResolveCombatRequest):
     """
-    Endpoint for helper logic to check if combat values result in Overrun.
+    Endpoint for executing Combat Resolution (Roll dice, determine outcome).
     """
-    result = game_logic.process_overrun_check(
-        data.attackTotal,
-        data.defenseTotal,
-        data.defenderDF
+    result = game_logic.process_combat(
+        data.attackValue,
+        data.defenseValue,
+        data.terrainMod,
+        data.strategyMod,
+        data.isNight
     )
     return result
 

@@ -120,6 +120,7 @@ function App() {
     // Restore missing state
     const [selectedArea, setSelectedArea] = useState(null);
     const [hoveredArea, setHoveredArea] = useState(null);
+    const [hoveredStack, setHoveredStack] = useState(null); // { units: [], pointer: {x, y} }
     const [backendStatus, setBackendStatus] = useState('Checking...');
 
     useEffect(() => {
@@ -420,15 +421,24 @@ function App() {
     };
 
     const handleUnitDragStart = (id) => {
-        setHoveredUnitData(null); // Clear tooltip
+        setHoveredStack(null); // Clear tooltip
         // Optional: Bring to front logic (handled by Konva usually)
     };
 
     const handleUnitHover = (unit, isHovering, pointer) => {
         if (isHovering) {
-            setHoveredUnitData({ unit, pointer });
+            // Find all units in stack
+            const stackThreshold = 60;
+            const stackUnits = units.filter(u =>
+                Math.abs(u.x - unit.x) < stackThreshold &&
+                Math.abs(u.y - unit.y) < stackThreshold
+            );
+            // Sort by visual order (same as render/click logic)
+            const sortedStack = [...stackUnits].sort((a, b) => (a.y - b.y) || (a.x - b.x));
+
+            setHoveredStack({ units: sortedStack, pointer });
         } else {
-            setHoveredUnitData(null);
+            setHoveredStack(null);
         }
     };
 
@@ -557,6 +567,39 @@ function App() {
                 </div>
             </div>
 
+            {/* Stack View Overlay */}
+            {hoveredStack && (
+                <div style={{
+                    position: 'absolute',
+                    top: hoveredStack.pointer.y + 20,
+                    left: hoveredStack.pointer.x + 20,
+                    zIndex: 100,
+                    pointerEvents: 'none',
+                    background: 'rgba(0,0,0,0.85)',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    border: '1px solid #999',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    gap: '8px',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
+                }}>
+                    {hoveredStack.units.map(u => (
+                        <div key={u.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <img
+                                src={`/images/${(u.status === 'spent' && u.backImage) ? u.backImage : u.frontImage}`}
+                                alt={u.id}
+                                style={{ width: '100px', height: '100px', borderRadius: '4px' }}
+                            />
+                            <div style={{ color: '#eee', fontSize: '0.75rem', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {u.id}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )
+            }
+
             <Stage
                 width={stageSize.width}
                 height={stageSize.height}
@@ -615,7 +658,7 @@ function App() {
                     ))}
                 </Layer>
             </Stage>
-        </div>
+        </div >
     );
 }
 

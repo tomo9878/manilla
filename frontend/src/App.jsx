@@ -254,9 +254,32 @@ function App() {
                 if (area) {
                     const center = getCentroid(area.points);
                     // Offset based on count to stack/grid them
+                    let offsetX = 0;
+                    let offsetY = 0;
+
                     const count = areaCounters[areaName] || 0;
-                    const offsetX = (count % 4) * (UNIT_SIZE + 10) - 100; // Grid layout
-                    const offsetY = Math.floor(count / 4) * (UNIT_SIZE + 10) - 50;
+
+                    if (areaName === "Area 2") {
+                        // Split into 3 columns/groups for Area 2
+                        const group = count % 3;
+                        const subIndex = Math.floor(count / 3);
+
+                        // Base offset for groups (Left, Center, Right)
+                        const groupBaseX = (group - 1) * 120; // -120, 0, +120
+
+                        // Tiled layout within group (tighter packing)
+                        // Shift entire Area 2 group drastically Left (-300) and Up (-50)
+                        offsetX = (subIndex % 4) * 8 - 15 + groupBaseX - 300;
+                        offsetY = Math.floor(subIndex / 4) * 8 - 15 - 50;
+                    } else if (areaName === "Area 30") {
+                        // Area 30: Shift Left by 120
+                        offsetX = (count % 5) * 5 - 10 - 120;
+                        offsetY = Math.floor(count / 5) * 5 - 10;
+                    } else {
+                        // Standard layout (Area 1 etc)
+                        offsetX = (count % 5) * 5 - 10;
+                        offsetY = Math.floor(count / 5) * 5 - 10;
+                    }
 
                     usUnits.push({
                         ...u,

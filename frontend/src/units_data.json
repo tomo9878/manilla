@@ -287,8 +287,7 @@
     "frontImage": "us_1C_754B.jpg",
     "backImage": "us_1C_754B_back.jpg",
     "faction": "US",
-    "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Reinforcements"
   },
   {
     "id": "37_637A",
@@ -323,7 +322,6 @@
     "frontImage": "us_37_754A.jpg",
     "backImage": "us_37_754A_back.jpg",
     "faction": "US",
-    "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Reinforcements"
   }
 ]

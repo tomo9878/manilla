@@ -131,6 +131,113 @@ function App() {
     // Context Menu State
     const [contextMenu, setContextMenu] = useState(null); // { x, y, unitId }
 
+
+
+    // Game Phase State
+    const [turn, setTurn] = useState(1);
+    const [currentPhase, setCurrentPhase] = useState('Setup'); // Setup, Dawn, Event, Supply, Combat, End
+    const [morale, setMorale] = useState(19);
+
+    // Event State
+    const [currentEvent, setCurrentEvent] = useState(null);
+    const [lastEvent, setLastEvent] = useState(null); // Keeps track of important previous events (Pause)
+
+    // Helper: Determine US Controlled Tags
+    const getUsControlledTags = () => {
+        const tags = new Set();
+        usControlledAreas.forEach(name => {
+            const area = mapData.find(a => a.name === name);
+            if (area && area.terrain) {
+                tags.add(area.terrain);
+            }
+        });
+        return Array.from(tags);
+    };
+
+    // Phase Handlers
+    const handleEventPhase = async () => {
+        try {
+            const tags = getUsControlledTags();
+            const res = await fetch('/api/phase/event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    currentTurn: turn,
+                    units: units,
+                    morale: morale,
+                    lastEvent: lastEvent,
+                    usControlledTags: tags
+                })
+            });
+
+            const data = await res.json();
+
+            // Update State
+            setCurrentEvent(data.event);
+
+            // Only update lastEvent if it's a Pause (to track consecutive pauses correctly)
+            // If we overwrite with "No Result", we lose history of the previous pause?
+            // Rule Says: "If the same US Division... is selected for a SECOND consecutive Turn..."
+            // This implies we compare Turn N result with Turn N-1 result.
+            // If Turn 2 was "Pause 1st Cav", and Turn 3 is "No Result", then Turn 4 rolls "Pause 1st Cav"...
+            // Is that consecutive? No, because Turn 3 was No Result.
+            // So we SHOULD update lastEvent every turn, even if No Result.
+            // Wait, "Consecutive Turn" means T and T+1. 
+            // So yes, we overwrite lastEvent every turn.
+            setLastEvent(data.event);
+
+            if (data.morale !== morale) {
+                setMorale(data.morale);
+                // Alert after state update
+                setTimeout(() => alert(`Morale Change: Now ${data.morale}`), 100);
+            }
+
+            if (data.logs.length > 0) {
+                console.log("Event Phase Logs:", data.logs);
+                setTimeout(() => alert("Event Result:\n" + data.event.name + "\n\n" + data.logs.join('\n')), 200);
+            }
+
+            // Ready to proceed to next phase (Supply) manually
+
+        } catch (e) {
+            console.error("Event API Error", e);
+            alert("Error processing Event Phase.");
+        }
+    };
+
+    // Proceed to Supply
+    const handleProceedToSupply = () => {
+        setCurrentPhase('Supply');
+    };
+
+    const handleDawnPhase = async () => {
+        try {
+            const res = await fetch('/api/phase/dawn', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentTurn: turn, units: units, morale: morale })
+            });
+            if (!res.ok) throw new Error("API Call Failed");
+
+            const data = await res.json();
+
+            // Log messages to user
+            console.log("Dawn Phase Results:", data.logs);
+            if (data.logs.length > 0) {
+                alert("Dawn Phase Report:\n" + data.logs.join('\n'));
+            }
+
+            // Update State
+            setUnits(data.units);
+            setMorale(data.morale);
+            setCurrentPhase('Event'); // Advance to Event Phase
+        } catch (e) {
+            console.error(e);
+            alert("Error processing Dawn Phase. Is backend running?");
+        }
+    };
+
+
     // Recover Unit Handler
     const handleRecoverUnit = (unitId) => {
         const unit = units.find(u => u.id === unitId);
@@ -449,7 +556,12 @@ function App() {
             return next;
         });
 
-        console.log("End Phase: Units refreshed, Used Support Cleared.");
+        // Advance Turn Logic
+        setTurn(prev => prev + 1);
+        setCurrentPhase('Dawn');
+        setCurrentEvent(null); // Clear event for new turn
+
+        console.log("End Phase: Units refreshed, Turn Advanced.");
     };
 
     // Helper to get division prefix
@@ -553,18 +665,13 @@ function App() {
 
         unitsData.forEach((u) => {
             if (u.startArea === "Reinforcements" || !u.startArea) {
-                // Stack compactly in Reinforcement box
-                const count = reinforcementCount;
-                const offsetX = (count % 5) * 5;
-                const offsetY = Math.floor(count / 5) * 5;
-
+                // Future Reinforcements - Hidden until Dawn Phase triggers
                 usUnits.push({
                     ...u,
-                    x: 4000 + offsetX,
-                    y: 3600 + offsetY,
-                    status: 'fresh'
+                    x: 0,
+                    y: 0,
+                    status: 'future'
                 });
-                reinforcementCount++;
             } else {
                 // Place in specific area
                 const areaName = u.startArea;
@@ -653,6 +760,12 @@ function App() {
         });
 
         setUnits(newUnits);
+
+        // Initialize Game State
+        setTurn(1);
+        setCurrentPhase('Dawn');
+        setMorale(19);
+
         console.log("Game Started: Units distributed.");
     };
 
@@ -680,7 +793,7 @@ function App() {
 
     // Calculate stack indices for rendering
     // Sort units by Y then X for consistent rendering
-    const mapUnits = units.filter(u => !['out_of_action', 'eliminated', 'wounded'].includes(u.status));
+    const mapUnits = units.filter(u => !['out_of_action', 'eliminated', 'wounded', 'future'].includes(u.status));
     const sortedUnits = [...mapUnits].sort((a, b) => a.y - b.y || a.x - b.x);
 
     // Calculate stack index (0, 1, 2...) for offset
@@ -750,9 +863,41 @@ function App() {
                         Scale: {scale.toFixed(4)}<br />
                         Pos: {position.x.toFixed(0)}, {position.y.toFixed(0)}
                     </div>
-                    {/* Fallback raw image check */}
-                    <div style={{ marginTop: '5px', border: '1px solid white', width: '50px', height: '50px', overflow: 'hidden' }}>
-                        <img src="/map.jpg" alt="Check" style={{ width: '100%' }} />
+                </div>
+
+                {/* Game Status Panel */}
+                <div style={{ padding: '10px', background: '#333', marginBottom: '1rem', borderRadius: '4px', border: '1px solid #555' }}>
+                    <div style={{ fontSize: '1.2rem', color: '#fff', fontWeight: 'bold', marginBottom: '5px' }}>
+                        Turn {turn}
+                    </div>
+                    <div style={{ color: '#00ccff', marginBottom: '5px' }}>
+                        Phase: {currentPhase}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                        <span>Morale: {morale}</span>
+                        <span>Supply: {supplyPoints}</span>
+                    </div>
+
+                    {/* Event Display */}
+                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #555' }}>
+                        <div style={{ fontSize: '0.85rem', color: '#aaa' }}>Current Event:</div>
+                        {currentEvent ? (
+                            <div style={{
+                                color: currentEvent.name === 'No Result' ? '#777' : '#ffeb3b',
+                                fontWeight: 'bold',
+                                fontSize: '0.9rem',
+                                marginTop: '3px'
+                            }}>
+                                {currentEvent.name}
+                                {currentEvent.type !== 'No Result' && (
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#ccc' }}>
+                                        ({currentEvent.type}) Roll: {currentEvent.roll}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div style={{ fontSize: '0.85rem', color: '#555', fontStyle: 'italic' }}>None</div>
+                        )}
                     </div>
                 </div>
 
@@ -795,6 +940,63 @@ function App() {
                     >
                         Start Game
                     </button>
+
+                    {currentPhase === 'Dawn' && (
+                        <button
+                            onClick={handleDawnPhase}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                background: '#ff9800', // Orange
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '1rem',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            Execute Dawn Phase
+                        </button>
+                    )}
+
+                    {currentPhase === 'Event' && !currentEvent && (
+                        <button
+                            onClick={handleEventPhase}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                background: '#9c27b0', // Purple
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '1rem',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            Roll Event
+                        </button>
+                    )}
+
+                    {currentPhase === 'Event' && currentEvent && (
+                        <button
+                            onClick={handleProceedToSupply}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                background: '#4caf50', // Green
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '1rem',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            To Supply Phase &gt;
+                        </button>
+                    )}
                     <button
                         onClick={handleEndPhase}
                         style={{

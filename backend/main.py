@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+from game_logic import GameLogic
 
 app = FastAPI()
+game_logic = GameLogic()
 
 # CORS configuration to allow frontend to communicate with backend
 origins = [
@@ -17,6 +21,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class Unit(BaseModel):
+    id: str
+    name: str = ""
+    status: str = "fresh"
+    type: str = "Unit"
+    # Allow arbitrary extra fields (coordinates, images, etc.)
+    class Config:
+        extra = "allow"
+
+class DawnPhaseRequest(BaseModel):
+    currentTurn: int
+    units: List[Unit]
+    morale: int
+
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "Manila: Savage Streets 1945 Backend Online"}
@@ -24,3 +42,41 @@ def read_root():
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy"}
+
+@app.post("/api/phase/dawn")
+def run_dawn_phase(data: DawnPhaseRequest):
+    """
+    Endpoint to trigger Dawn Phase logic (Reinforcements, Withdrawals, Leader Checks).
+    """
+    # Convert Pydantic models to list of dicts for the logic engine
+    units_dict = [u.dict() for u in data.units]
+    
+    result = game_logic.process_dawn_phase(
+        data.currentTurn, 
+        units_dict, 
+        data.morale
+    )
+    return result
+
+class RandomEventRequest(BaseModel):
+    currentTurn: int
+    units: List[Unit]
+    morale: int
+    lastEvent: Optional[Dict[str, Any]] = None # The event result object from previous turn
+    usControlledTags: List[str] = [] # List of tags like 'Urban', 'Fort', 'Clear'
+
+@app.post("/api/phase/event")
+def run_random_event_phase(data: RandomEventRequest):
+    """
+    Endpoint to trigger Random Event Phase logic (Rule 6.2).
+    """
+    units_dict = [u.dict() for u in data.units]
+    
+    result = game_logic.process_random_event(
+        data.currentTurn,
+        data.lastEvent,
+        data.usControlledTags,
+        units_dict,
+        data.morale
+    )
+    return result

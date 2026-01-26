@@ -226,18 +226,22 @@ function App() {
         // Setup US Units (Based on updated units_data.json)
         const usUnits = [];
         const areaCounters = { "Area 1": 0, "Area 2": 0, "Area 30": 0 };
+        let reinforcementCount = 0;
 
         unitsData.forEach((u) => {
             if (u.startArea === "Reinforcements" || !u.startArea) {
-                // Not on map initially
-                // We could place them in a box off-screen or just hide them.
-                // Let's place them in a visible "Reinforcement Box" area (e.g. bottom right)
+                // Stack compactly in Reinforcement box
+                const count = reinforcementCount;
+                const offsetX = (count % 5) * 5;
+                const offsetY = Math.floor(count / 5) * 5;
+
                 usUnits.push({
                     ...u,
-                    x: 4000 + (usUnits.length % 5) * 110, // Far off map
-                    y: 3000 + Math.floor(usUnits.length / 5) * 110,
+                    x: 4000 + offsetX,
+                    y: 3600 + offsetY,
                     status: 'fresh'
                 });
+                reinforcementCount++;
             } else {
                 // Place in specific area
                 const areaName = u.startArea;
@@ -299,7 +303,7 @@ function App() {
         // Iterate through all map areas
         // Setup JP Units
         // Iterate through all map areas
-        const excludeKeywords = ["Turn", "Record", "Morale", "Supply", "Reinforcements"];
+        const excludeKeywords = ["Turn", "Record", "Morale", "Supply", "Reinforcements", "Chits", "OOA", "Elevated"];
         const excludeExactAreas = ["Area 1", "Area 2", "Area 30"];
 
         mapData.forEach(area => {

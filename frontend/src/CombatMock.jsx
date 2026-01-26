@@ -9,17 +9,26 @@ const CombatMock = () => {
     const attackerUnits = [
         { id: "u1", name: "637/A", type: "Tank", attack_factor: 6, is_lead: true },
         { id: "u2", name: "1/145", type: "Infantry", attack_factor: 4 },
-        { id: "u3", name: "HQ Whitcomb", type: "Leader" }
+        { id: "u3", name: "HQ Whitcomb", type: "Leader", attack_factor: 0 }
     ];
 
     const defenderUnit = {
-        name: "JP Defender",
-        defense_factor: 9
+        name: "JP Urban 7",
+        strength: 7,
+        unitClass: "Ambush", // Test Ambush effect
+        defense_factor: 7
+    };
+
+    const handleApply = (result) => {
+        console.log("Mock Apply Result:", result);
+        alert(`Applied Result: ${result.resultType}\nMorale: ${result.currentMorale}\nSee console for details.`);
+        setShowModal(false);
     };
 
     return (
         <div style={{ padding: 20, background: '#1a202c', minHeight: '100vh', color: 'white' }}>
             <h1>Combat Mock Preview</h1>
+            <p>Scenario: US Tank Lead vs JP Ambush Unit in Urban.</p>
             <button
                 onClick={() => setShowModal(true)}
                 style={{
@@ -37,6 +46,7 @@ const CombatMock = () => {
             {showModal && (
                 <CombatModal
                     onClose={() => setShowModal(false)}
+                    onApply={handleApply}
                     attackerUnits={attackerUnits}
                     defenderUnit={defenderUnit}
                     terrain="Urban"

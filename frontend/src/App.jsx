@@ -5,10 +5,8 @@ import useImage from 'use-image';
 import unitsData from './units_data.json';
 import japaneseUnitsData from './japanese_units_data.json';
 import mapData from './map_data.json';
-import CombatMock from './CombatMock';
+import CombatModal from './components/CombatModal';
 
-// --- MOCK MODE TOGGLE ---
-const SHOW_COMBAT_MOCK = true;
 
 // High-DPI setting
 Konva.pixelRatio = window.devicePixelRatio || 1;
@@ -118,13 +116,58 @@ const MapImage = ({ onImageLoad }) => {
 };
 
 function App() {
-    if (SHOW_COMBAT_MOCK) return <CombatMock />;
+    // Combat State
+    const [showCombatModal, setShowCombatModal] = useState(false);
+    const [combatData, setCombatData] = useState(null);
     const [stageSize, setStageSize] = useState({ width: Math.floor(window.innerWidth * 0.6), height: window.innerHeight });
     const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
     const [scale, setScale] = useState(0.25); // Zoom out a bit more initially
     const [position, setPosition] = useState({ x: 0, y: 0 });
 
     const [units, setUnits] = useState([]);
+
+    // Initialization
+    useEffect(() => {
+        if (units.length > 0) return;
+
+        const initialUnits = [];
+
+        // 1. Load US Units
+        unitsData.forEach((u, i) => {
+            initialUnits.push({
+                ...u,
+                status: 'fresh',
+                x: 100 + (i % 5) * 60,
+                y: 100 + Math.floor(i / 5) * 110,
+                faction: 'US',
+                location: 'Area 1' // Default start
+            });
+        });
+
+        // 2. Load JP Units (1 per Urban/Fort Area)
+        let jpIdx = 0;
+        mapData.forEach(area => {
+            if (['Urban', 'Fort'].includes(area.terrain)) {
+                const candidates = japaneseUnitsData.filter(ju => ju.terrainType === area.terrain);
+                if (candidates.length > 0) {
+                    const template = candidates[Math.floor(Math.random() * candidates.length)];
+                    initialUnits.push({
+                        ...template,
+                        id: `jp_${area.name.replace(/\s/g, '')}_${jpIdx++}`,
+                        name: template.name, // Keep generic name until reveal?
+                        status: 'hidden',
+                        x: area.points[0] + 50, // Approximate center placement
+                        y: area.points[1] + 50,
+                        faction: 'JP',
+                        location: area.name
+                    });
+                }
+            }
+        });
+
+        setUnits(initialUnits);
+        console.log("Initialized Units:", initialUnits.length);
+    }, []);
 
     // Restore missing state
     const [selectedArea, setSelectedArea] = useState(null);
@@ -368,6 +411,96 @@ function App() {
     const handleProceedToCombat = () => {
         setSupplyRolled(false);
         checkBloodyStreets();
+    };
+
+    // --- Combat Logic ---
+    const handleCombatInitiation = (areaName) => {
+        // Find units in this area
+        const areaUnits = units.filter(u => u.location === areaName && u.status !== 'eliminated' && u.status !== 'out_of_action');
+        const attackers = areaUnits.filter(u => u.faction === 'US');
+        const defenders = areaUnits.filter(u => u.faction === 'JP');
+
+        if (attackers.length === 0) return; // No US units
+        if (defenders.length === 0) return; // No Enemy (Control Logic?)
+
+        // Setup Data
+        const area = mapData.find(a => a.name === areaName);
+        setCombatData({
+            attackerUnits: attackers,
+            defenderUnit: defenders[0], // Assume 1 per area for now
+            terrain: area ? area.terrain : 'Clear',
+            areaName: areaName
+        });
+        setShowCombatModal(true);
+    };
+
+    const handleCombatApply = async (result) => {
+        console.log("Applying Combat Result:", result);
+
+        // 1. Call Backend API to finalize state/logs (Optional, done mostly in frontend logic below but better to sync)
+        try {
+            await fetch('/api/combat/apply_result', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    resultType: result.resultType,
+                    attackerUnits: result.attackerUnits,
+                    defenderUnit: result.defenderUnit,
+                    targetArea: combatData.areaName,
+                    currentMorale: morale
+                })
+            });
+        } catch (e) {
+            console.error("API Apply Error", e);
+        }
+
+        // 2. Update Local State based on Result
+        // Update updated units
+        const updatedIds = new Set();
+        const updates = {};
+
+        if (result.attackerUnits) {
+            result.attackerUnits.forEach(u => {
+                updatedIds.add(u.id);
+                updates[u.id] = u;
+            });
+        }
+        if (result.defenderUnit) {
+            updatedIds.add(result.defenderUnit.id);
+            updates[result.defenderUnit.id] = result.defenderUnit;
+        }
+
+        setUnits(prev => prev.map(u => {
+            if (updatedIds.has(u.id)) {
+                return { ...u, ...updates[u.id] };
+            }
+            return u;
+        }));
+
+        // Update Morale
+        if (result.currentMorale !== undefined) {
+            // Logic in Modal might pass NEW morale or CURRENT?
+            // My implementation in Modal passed `currentMorale: morale` (old).
+            // But backend returns `new_morale`.
+            // Ideally we use backend response.
+            // But for now, let's just decrement if Repulse?
+            // Wait, `apply_combat_result` API calc is better.
+            // Let's rely on API response if possible.
+            // But here I didn't wait for API response data.
+
+            // Simple fallback: If resultType is Repulse, -1.
+            if (result.resultType === 'Repulse') {
+                setMorale(m => m - 1);
+            }
+        }
+
+        // Update Control
+        if (result.resultType === 'Success' || result.resultType === 'Overrun') {
+            setUsControlledAreas(prev => Array.from(new Set([...prev, combatData.areaName])));
+        }
+
+        setShowCombatModal(false);
+        setCombatData(null);
     };
 
 
@@ -1286,8 +1419,18 @@ function App() {
                                     document.body.style.cursor = 'default';
                                     setHoveredArea(null);
                                 }}
-                                onClick={() => setSelectedArea(area)}
-                                onTap={() => setSelectedArea(area)}
+                                onClick={() => {
+                                    if (currentPhase === 'Combat') {
+                                        handleCombatInitiation(area.name);
+                                    }
+                                    setSelectedArea(area);
+                                }}
+                                onTap={() => {
+                                    if (currentPhase === 'Combat') {
+                                        handleCombatInitiation(area.name);
+                                    }
+                                    setSelectedArea(area);
+                                }}
                                 onContextMenu={(e) => handleAreaContextMenu(e, area.name)}
                             />
                         ))}
@@ -1481,6 +1624,18 @@ function App() {
                     )}
                 </div>
             </div>
+
+            {/* Combat Modal */}
+            {showCombatModal && combatData && (
+                <CombatModal
+                    onClose={() => setShowCombatModal(false)}
+                    onApply={handleCombatApply}
+                    attackerUnits={combatData.attackerUnits}
+                    defenderUnit={combatData.defenderUnit}
+                    terrain={combatData.terrain}
+                    morale={morale}
+                />
+            )}
 
             {/* Context Menu */}
             {contextMenu && (

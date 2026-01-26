@@ -126,7 +126,7 @@ function App() {
     const [hoveredArea, setHoveredArea] = useState(null);
     const [hoveredStack, setHoveredStack] = useState(null); // { units: [], pointer: {x, y} }
     const [backendStatus, setBackendStatus] = useState('Checking...');
-    const [usControl, setUsControl] = useState(3); // Start with 3 areas
+    const [usControlledAreas, setUsControlledAreas] = useState(['Area 1', 'Area 2', 'Area 30']); // Track actual area names
     // Context Menu State
     const [contextMenu, setContextMenu] = useState(null); // { x, y, unitId }
 
@@ -170,6 +170,26 @@ function App() {
             y: e.clientY,
             unitId,
             type: 'remove' // Action available for map units
+        });
+    };
+
+    const handleToggleControl = (areaName) => {
+        if (usControlledAreas.includes(areaName)) {
+            setUsControlledAreas(prev => prev.filter(n => n !== areaName));
+        } else {
+            setUsControlledAreas(prev => [...prev, areaName]);
+        }
+        setContextMenu(null);
+    };
+
+    const handleAreaContextMenu = (e, areaName) => {
+        e.cancelBubble = true;
+        e.evt.preventDefault();
+        setContextMenu({
+            x: e.evt.clientX,
+            y: e.evt.clientY,
+            areaName, // specific property for Area actions
+            type: 'area'
         });
     };
 
@@ -764,8 +784,8 @@ function App() {
                             <Line
                                 key={i}
                                 points={area.points}
-                                fill={selectedArea?.name === area.name ? 'rgba(255, 0, 0, 0.4)' : (hoveredArea === area.name ? 'rgba(255, 255, 255, 0.2)' : 'transparent')}
-                                stroke={selectedArea?.name === area.name ? 'red' : 'rgba(255,255,0,0.3)'}
+                                fill={usControlledAreas.includes(area.name) ? 'rgba(0, 100, 255, 0.15)' : (selectedArea?.name === area.name ? 'rgba(255, 0, 0, 0.4)' : (hoveredArea === area.name ? 'rgba(255, 255, 255, 0.2)' : 'transparent'))}
+                                stroke={usControlledAreas.includes(area.name) ? 'rgba(0, 150, 255, 0.5)' : (selectedArea?.name === area.name ? 'red' : 'rgba(255,255,0,0.3)')}
                                 strokeWidth={3}
                                 closed
                                 onMouseEnter={() => {
@@ -778,6 +798,7 @@ function App() {
                                 }}
                                 onClick={() => setSelectedArea(area)}
                                 onTap={() => setSelectedArea(area)}
+                                onContextMenu={(e) => handleAreaContextMenu(e, area.name)}
                             />
                         ))}
 
@@ -839,10 +860,10 @@ function App() {
                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2196f3' }}>19 (Strong)</div>
                     </div>
 
-                    {/* Control (Static) */}
+                    {/* Control (Dynamic) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
                         <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Control</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControl} (Goal: 34)</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControlledAreas.length} (Goal: 34)</div>
                     </div>
                 </div>
 
@@ -946,6 +967,22 @@ function App() {
                             style={{ display: 'block', width: '100%', padding: '8px', background: '#4caf50', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
                         >
                             Recover (2 Supply)
+                        </button>
+                    ) : contextMenu.type === 'area' ? (
+                        <button
+                            onClick={() => handleToggleControl(contextMenu.areaName)}
+                            style={{
+                                display: 'block',
+                                width: '100%',
+                                padding: '8px',
+                                background: usControlledAreas.includes(contextMenu.areaName) ? '#d32f2f' : '#2196f3',
+                                color: 'white',
+                                border: 'none',
+                                cursor: 'pointer',
+                                borderRadius: '2px'
+                            }}
+                        >
+                            {usControlledAreas.includes(contextMenu.areaName) ? 'JP Recapture' : 'US Take Control'}
                         </button>
                     ) : (
                         <button

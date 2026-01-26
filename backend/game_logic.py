@@ -294,3 +294,78 @@ class GameLogic:
             "new_total": new_total,
             "logs": logs
         }
+
+    def process_bloody_streets_check(self, area_data):
+        """
+        Executes Bloody Streets Impulse Step (Combat Phase start).
+        
+        Args:
+            area_data (list): List of area dicts with units:
+                [
+                  {
+                    "name": "Intramuros",
+                    "terrain": "Fort", 
+                    "us_count": 2, 
+                    "jp_count": 1
+                  }, ...
+                ]
+            
+        Returns:
+            dict: {
+                "results": [
+                    {
+                        "area": str,
+                        "roll": int,
+                        "effect": str, # 'No Effect', 'OOA', 'OOA + Morale -1'
+                        "required_ooa": int,
+                        "morale_penalty": int
+                    }
+                ],
+                "logs": list
+            }
+        """
+        results = []
+        logs = []
+        logs.append("Checking for Bloody Streets (Urban/Fort + Contested)...")
+        
+        for area in area_data:
+            terrain = area.get('terrain')
+            us_count = area.get('us_count', 0)
+            jp_count = area.get('jp_count', 0)
+            
+            # Rule: Urban or Fort AND Contested (Both sides > 0)
+            if terrain in ['Urban', 'Fort'] and us_count > 0 and jp_count > 0:
+                roll = random.randint(1, 6)
+                effect = "No Effect"
+                required_ooa = 0
+                morale_penalty = 0
+                
+                if roll <= 2: # 1-2
+                    effect = "No Effect"
+                    logs.append(f"Bloody Streets in {area['name']}: Rolled {roll} -> No Effect")
+                elif roll <= 4: # 3-4
+                    effect = "OOA"
+                    required_ooa = 1
+                    logs.append(f"Bloody Streets in {area['name']}: Rolled {roll} -> US takes 1 OOA!")
+                else: # 5-6
+                    effect = "OOA + Morale -1"
+                    required_ooa = 1
+                    morale_penalty = 1
+                    logs.append(f"Bloody Streets in {area['name']}: Rolled {roll} -> US takes 1 OOA and Morale -1!")
+                
+                if required_ooa > 0:
+                    results.append({
+                        "area": area['name'],
+                        "roll": roll,
+                        "effect": effect,
+                        "required_ooa": required_ooa,
+                        "morale_penalty": morale_penalty
+                    })
+        
+        if not results:
+            logs.append("No Bloody Streets casualties occurred.")
+            
+        return {
+            "results": results,
+            "logs": logs
+        }

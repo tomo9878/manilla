@@ -39,8 +39,13 @@ The Combat Phase is the core of "Manila: Savage Streets 1945". It involves an im
 
 ### 4. Special Rules
 - **Bloody Streets (Rule 8.0)**:
-  - At start of Combat Phase, check "Contested Areas" (both sides present).
-  - Roll 1d6 for each side. On 6, taking a step loss.
+  - **Trigger**: Start of Combat Phase (Action Round 0).
+  - **Condition**: Area is **Urban** or **Fort** AND contains **both US and JP units**.
+  - **Process**: Roll 1d6 per valid area.
+    - **1-2**: No Effect.
+    - **3-4 (Bloody Streets)**: US Player selects 1 unit -> **OOA**.
+    - **5-6 (Heavy Losses)**: US Player selects 1 unit -> **OOA** AND **Morale -1**.
+  - **Note**: Japan takes no losses from this check.
 - **Combined Arms**:
   - Tank + Infantry stack benefit.
 

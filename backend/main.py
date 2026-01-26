@@ -96,3 +96,15 @@ def run_supply_roll(data: SupplyRollRequest):
         data.currentSupply
     )
     return result
+
+class BloodyStreetsRequest(BaseModel):
+    areaData: List[Dict[str, Any]] # List of { "name": "...", "terrain": "...", "us_count": X, "jp_count": Y }
+
+@app.post("/api/phase/bloody_streets")
+def run_bloody_streets_check(data: BloodyStreetsRequest):
+    """
+    Endpoint for Bloody Streets Impulse (Start of Combat Phase).
+    """
+    result = game_logic.process_bloody_streets_check(data.areaData)
+    return result
+

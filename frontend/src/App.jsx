@@ -139,6 +139,7 @@ function App() {
     const [morale, setMorale] = useState(19);
     const [hasBeenShaken, setHasBeenShaken] = useState(false); // Rule 11.6: Air Support unlock
     const [supplyRolled, setSupplyRolled] = useState(false); // Track if roll logic is done this turn
+    const [bloodyStreetsQueue, setBloodyStreetsQueue] = useState([]);
 
     // Event State
     const [currentEvent, setCurrentEvent] = useState(null);
@@ -278,10 +279,90 @@ function App() {
         }
     };
 
+    // --- Bloody Streets Logic ---
+    const checkBloodyStreets = async () => {
+        // Build Area Data
+        const areaData = mapData.map(area => {
+            const areaUnits = units.filter(u =>
+                !['out_of_action', 'eliminated', 'wounded', 'future'].includes(u.status) &&
+                isPointInPolygon(u.x, u.y, area.points)
+            );
+            return {
+                name: area.name,
+                terrain: area.terrain,
+                us_count: areaUnits.filter(u => u.faction !== 'JP').length,
+                jp_count: areaUnits.filter(u => u.faction === 'JP').length
+            };
+        });
+
+        try {
+            const res = await fetch('/api/phase/bloody_streets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ areaData })
+            });
+            const data = await res.json();
+
+            if (data.results && data.results.length > 0) {
+                console.log("Bloody Streets Events:", data.results);
+                setBloodyStreetsQueue(data.results);
+                alert("⚠️ Bloody Streets detected! Resolve casualties before Combat Phase.");
+            } else {
+                console.log("No Bloody Streets events.");
+                setCurrentPhase('Combat');
+            }
+
+            if (data.logs.length > 0) {
+                console.log(data.logs.join('\n'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error checking Bloody Streets.");
+            setCurrentPhase('Combat'); // Fallback
+        }
+    };
+
+    const handleBloodyStreetsSelection = (unitId) => {
+        const currentEvent = bloodyStreetsQueue[0];
+        if (!currentEvent) return;
+
+        const unit = units.find(u => u.id === unitId);
+        if (!unit) return;
+
+        // Validation
+        if (unit.faction === 'JP') {
+            alert("Must select a US unit for casualties.");
+            return;
+        }
+        const area = mapData.find(a => a.name === currentEvent.area);
+        if (!area || !isPointInPolygon(unit.x, unit.y, area.points)) {
+            alert(`Selected unit must be in ${currentEvent.area}!`);
+            return;
+        }
+
+        // Apply Morale Penalty (Once per event)
+        if (currentEvent.morale_penalty > 0) {
+            setMorale(prev => prev - currentEvent.morale_penalty);
+            // alert(`Bloody Streets Effect: Morale -${currentEvent.morale_penalty}`);
+        }
+
+        // Apply OOA
+        setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'out_of_action' } : u));
+
+        // Advance
+        const newQueue = bloodyStreetsQueue.slice(1);
+        setBloodyStreetsQueue(newQueue);
+
+        if (newQueue.length === 0) {
+            alert("Bloody Streets resolution complete. Beginning Combat Phase.");
+            setCurrentPhase('Combat');
+        }
+    };
+
     // Proceed to Combat
     const handleProceedToCombat = () => {
-        setCurrentPhase('Combat');
-        setSupplyRolled(false); // Reset flg for next turn
+        setSupplyRolled(false);
+        checkBloodyStreets();
     };
 
 
@@ -534,6 +615,12 @@ function App() {
     };
 
     const handleUnitClick = (id) => {
+        // Bloody Streets Interception
+        if (bloodyStreetsQueue.length > 0) {
+            handleBloodyStreetsSelection(id);
+            return;
+        }
+
         // Rotate stack logic
         const clickedUnit = units.find(u => u.id === id);
         if (!clickedUnit) return;
@@ -634,7 +721,7 @@ function App() {
     };
 
     // Ray-casting algorithm
-    const isPointInPolygon = (x, y, poly) => {
+    function isPointInPolygon(x, y, poly) {
         let inside = false;
         for (let i = 0, j = poly.length - 2; i < poly.length; i += 2) {
             let xi = poly[i], yi = poly[i + 1];
@@ -1113,6 +1200,40 @@ function App() {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {bloodyStreetsQueue.length > 0 && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 20,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 500,
+                        background: 'rgba(50, 0, 0, 0.95)',
+                        color: 'white',
+                        padding: '20px',
+                        borderRadius: '8px',
+                        border: '2px solid red',
+                        boxShadow: '0 0 20px rgba(255, 0, 0, 0.5)',
+                        textAlign: 'center',
+                        maxWidth: '80%'
+                    }}>
+                        <h2 style={{ margin: '0 0 10px 0', borderBottom: '1px solid #fff', color: '#ff3333' }}>BLOODY STREETS!</h2>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                            Area: {bloodyStreetsQueue[0].area}
+                        </div>
+                        <div style={{ margin: '10px 0', fontSize: '1rem' }}>
+                            Result: Rolled {bloodyStreetsQueue[0].roll} ({bloodyStreetsQueue[0].effect})
+                        </div>
+                        <div style={{ color: '#ffaaaa', fontWeight: 'bold' }}>
+                            ⚠ Select 1 US Unit in this area to take casualties (OOA).
+                        </div>
+                        {bloodyStreetsQueue[0].morale_penalty > 0 && (
+                            <div style={{ color: '#fa0', fontSize: '0.9rem', marginTop: '5px' }}>
+                                (Additional Consequence: Morale -1)
+                            </div>
+                        )}
                     </div>
                 )}
 

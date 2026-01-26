@@ -11,7 +11,7 @@ Konva.pixelRatio = window.devicePixelRatio || 1;
 
 const UNIT_SIZE = 100;
 
-const UnitCounter = ({ unit, x, y, indexInStack, onDragStart, onDragEnd, onClick, onDblClick, onHover }) => {
+const UnitCounter = ({ unit, x, y, indexInStack, onDragStart, onDragEnd, onClick, onDblClick, onHover, onContextMenu }) => {
     // Load both images to prevent flickering when flipping
     const [frontImg] = useImage(`/images/${unit.frontImage}`);
     const [backImg] = useImage(unit.backImage ? `/images/${unit.backImage}` : null);
@@ -39,6 +39,10 @@ const UnitCounter = ({ unit, x, y, indexInStack, onDragStart, onDragEnd, onClick
             onClick={(e) => {
                 e.cancelBubble = true;
                 onClick && onClick(unit.id);
+            }}
+            onContextMenu={(e) => {
+                e.evt.preventDefault(); // Prevent browser context menu
+                onContextMenu && onContextMenu(e.evt, unit.id);
             }}
             onDblClick={(e) => {
                 e.cancelBubble = true;
@@ -123,6 +127,58 @@ function App() {
     const [hoveredStack, setHoveredStack] = useState(null); // { units: [], pointer: {x, y} }
     const [backendStatus, setBackendStatus] = useState('Checking...');
     const [usControl, setUsControl] = useState(3); // Start with 3 areas
+    // Context Menu State
+    const [contextMenu, setContextMenu] = useState(null); // { x, y, unitId }
+
+    // Recover Unit Handler
+    const handleRecoverUnit = (unitId) => {
+        const unit = units.find(u => u.id === unitId);
+        if (!unit) return;
+
+        // Cost logic (Simple for now: 2 points)
+        // TODO: HQ/Leader check for 0 cost
+        const cost = 2; // Default
+
+        if (supplyPoints >= cost) {
+            setSupplyPoints(prev => prev - cost);
+            setUnits(prev => prev.map(u => {
+                if (u.id === unitId) {
+                    return {
+                        ...u,
+                        status: 'fresh',
+                        x: 100, // Spawn at top-left logic or specific area
+                        y: 100
+                    };
+                }
+                return u;
+            }));
+            setContextMenu(null); // Close menu
+        } else {
+            alert("Not enough supply options!");
+        }
+    };
+
+    const handleRemoveUnit = (unitId) => {
+        setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'out_of_action' } : u));
+        setContextMenu(null);
+    };
+
+    const handleUnitContextMenu = (e, unitId) => {
+        // e is native event from Konva
+        setContextMenu({
+            x: e.evt.clientX,
+            y: e.evt.clientY,
+            unitId,
+            type: 'remove' // Action available for map units
+        });
+    };
+
+    // Close menu on click anywhere
+    useEffect(() => {
+        const handleClick = () => setContextMenu(null);
+        window.addEventListener('click', handleClick);
+        return () => window.removeEventListener('click', handleClick);
+    }, []);
 
     // Resource State
     const [supplyPoints, setSupplyPoints] = useState(12); // Initial Supply
@@ -738,6 +794,7 @@ function App() {
                                 onClick={handleUnitClick}
                                 onDblClick={handleUnitDblClick}
                                 onHover={handleUnitHover}
+                                onContextMenu={handleUnitContextMenu}
                             />
                         ))}
                     </Layer>
@@ -843,10 +900,63 @@ function App() {
                 </div>
 
                 <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Out of Action</h3>
-                <div style={{ background: '#2a2a2a', padding: '20px', borderRadius: '4px', textAlign: 'center', border: '1px dashed #555' }}>
-                    <div style={{ color: '#777', fontStyle: 'italic' }}>No units lost</div>
+                <div style={{ minHeight: '60px', background: '#2a2a2a', padding: '10px', borderRadius: '4px', border: '1px dashed #555' }}>
+                    {units.filter(u => u.status === 'out_of_action').length === 0 ? (
+                        <div style={{ color: '#777', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>No units lost</div>
+                    ) : (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                            {units.filter(u => u.status === 'out_of_action').map(u => (
+                                <img
+                                    key={u.id}
+                                    src={`/images/${u.frontImage}`}
+                                    alt={u.id}
+                                    style={{ width: '50px', height: '50px', borderRadius: '4px', cursor: 'context-menu', opacity: 0.8, border: '1px solid #777' }}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        setContextMenu({ x: e.clientX, y: e.clientY, unitId: u.id, type: 'recover' });
+                                    }}
+                                    title={`${u.name}\nRight-click to Recover`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* Context Menu */}
+            {contextMenu && (
+                <div style={{
+                    position: 'fixed',
+                    top: contextMenu.y,
+                    left: contextMenu.x,
+                    background: '#333',
+                    border: '1px solid #555',
+                    borderRadius: '4px',
+                    padding: '5px',
+                    zIndex: 1000,
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                    color: 'white',
+                    minWidth: '150px'
+                }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {contextMenu.type === 'recover' ? (
+                        <button
+                            onClick={() => handleRecoverUnit(contextMenu.unitId)}
+                            style={{ display: 'block', width: '100%', padding: '8px', background: '#4caf50', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
+                        >
+                            Recover (2 Supply)
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => handleRemoveUnit(contextMenu.unitId)}
+                            style={{ display: 'block', width: '100%', padding: '8px', background: '#f44336', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
+                        >
+                            Send to Out of Action
+                        </button>
+                    )}
+                </div>
+            )}
 
         </div>
     );

@@ -729,3 +729,113 @@ class GameLogic:
             "morale": new_morale,
             "logs": logs
         }
+
+    def apply_combat_result(self, result_type, attacker_units, defender_unit, target_area, current_morale):
+        """
+        Applies the combat result to units and game state.
+        
+        Args:
+            result_type (str): 'Repulse', 'Stalemate', 'Success', 'Overrun'
+            attacker_units (list): List of attacking units (dicts). Must identify 'is_lead'.
+            defender_unit (dict): Defending unit dict.
+            target_area (str): Name of the area.
+            current_morale (int): Current US Morale.
+            
+        Returns:
+            dict: {
+                "updated_attacker_units": list,
+                "updated_defender_unit": dict, # or None if eliminated? Better return dict with status updated.
+                "new_morale": int,
+                "area_update": dict, # { "control": "US" } or null
+                "logs": list
+            }
+        """
+        logs = []
+        updated_attackers = []
+        updated_defender = defender_unit.copy() if defender_unit else None
+        new_morale = current_morale
+        area_update = {}
+        
+        # Identify Lead
+        # Assuming frontend passes 'is_lead': True in one unit
+        lead_unit = next((u for u in attacker_units if u.get('is_lead')), attacker_units[0] if attacker_units else None)
+        
+        logs.append(f"Applying Combat Result: {result_type}")
+        
+        if result_type == 'Repulse':
+            # 1. Lead Attacker -> OOA
+            if lead_unit:
+                logs.append(f"  Lead Unit {lead_unit.get('name')} -> OOA")
+                # In actual DB, OOA is a location 'OOA' or status 'out_of_action'?
+                # Using status 'out_of_action' and location 'OOA' box.
+                lead_unit['status'] = 'out_of_action'
+                lead_unit['location'] = 'OOA' 
+                
+            # 2. Others -> Spent
+            for u in attacker_units:
+                if u != lead_unit: # Object identity check might fail if copies, check ID
+                    # Check ID if possible, otherwise simple object comparison
+                    u_id = u.get('id')
+                    lead_id = lead_unit.get('id')
+                    is_lead = False
+                    if u_id and lead_id:
+                        is_lead = (u_id == lead_id)
+                    else:
+                        is_lead = (u == lead_unit)
+                        
+                    if not is_lead:
+                        u['status'] = 'spent'
+                        logs.append(f"  Unit {u.get('name')} -> Spent")
+                updated_attackers.append(u)
+                
+            # 3. Morale -1
+            new_morale -= 1
+            logs.append(f"  Morale: {current_morale} -> {new_morale} (-1)")
+            
+        elif result_type == 'Stalemate':
+            # 1. All Attackers -> Spent
+            for u in attacker_units:
+                u['status'] = 'spent'
+                updated_attackers.append(u)
+            logs.append("  All Attacking Units -> Spent")
+            
+        elif result_type == 'Success':
+            # 1. Defender -> Eliminated
+            if updated_defender:
+                updated_defender['status'] = 'eliminated'
+                updated_defender['location'] = 'Eliminated'
+                logs.append(f"  Defender {updated_defender.get('name')} -> Eliminated")
+                
+            # 2. All Attackers -> Spent
+            for u in attacker_units:
+                u['status'] = 'spent'
+                updated_attackers.append(u)
+            logs.append("  All Attacking Units -> Spent")
+            
+            # 3. Control Marker
+            area_update = {"control": "US"}
+            logs.append(f"  Area {target_area} -> US Control")
+            
+        elif result_type == 'Overrun':
+            # 1. Defender -> Eliminated
+            if updated_defender:
+                updated_defender['status'] = 'eliminated'
+                updated_defender['location'] = 'Eliminated'
+                logs.append(f"  Defender {updated_defender.get('name')} -> Eliminated")
+                
+            # 2. All Attackers -> Fresh (Maintain)
+            # No change to status
+            updated_attackers = attacker_units # Copy?
+            logs.append("  Overrun! All Attacking Units remain Fresh.")
+            
+            # 3. Control Marker
+            area_update = {"control": "US"}
+            logs.append(f"  Area {target_area} -> US Control")
+            
+        return {
+            "updated_attacker_units": updated_attackers,
+            "updated_defender_unit": updated_defender,
+            "new_morale": new_morale,
+            "area_update": area_update,
+            "logs": logs
+        }

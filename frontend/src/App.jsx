@@ -5,6 +5,10 @@ import useImage from 'use-image';
 import unitsData from './units_data.json';
 import japaneseUnitsData from './japanese_units_data.json';
 import mapData from './map_data.json';
+import CombatMock from './CombatMock';
+
+// --- MOCK MODE TOGGLE ---
+const SHOW_COMBAT_MOCK = true;
 
 // High-DPI setting
 Konva.pixelRatio = window.devicePixelRatio || 1;
@@ -114,6 +118,7 @@ const MapImage = ({ onImageLoad }) => {
 };
 
 function App() {
+    if (SHOW_COMBAT_MOCK) return <CombatMock />;
     const [stageSize, setStageSize] = useState({ width: Math.floor(window.innerWidth * 0.6), height: window.innerHeight });
     const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
     const [scale, setScale] = useState(0.25); // Zoom out a bit more initially

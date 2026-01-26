@@ -161,6 +161,27 @@ def calculate_combat_stats(data: CalculateCombatRequest):
     )
     return result
 
+class ApplyCombatResultRequest(BaseModel):
+    resultType: str
+    attackerUnits: List[Dict[str, Any]]
+    defenderUnit: Optional[Dict[str, Any]] = None
+    targetArea: str
+    currentMorale: int
+
+@app.post("/api/combat/apply_result")
+def apply_combat_result(data: ApplyCombatResultRequest):
+    """
+    Apply combat result state updates (Status changes, Morale, Control).
+    """
+    result = game_logic.apply_combat_result(
+        data.resultType,
+        data.attackerUnits,
+        data.defenderUnit,
+        data.targetArea,
+        data.currentMorale
+    )
+    return result
+
 class EndCombatRequest(BaseModel):
     units: List[Unit]
     morale: int

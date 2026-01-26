@@ -110,12 +110,15 @@ def run_bloody_streets_check(data: BloodyStreetsRequest):
 
 
 
+
 class ResolveCombatRequest(BaseModel):
     attackValue: int
     defenseValue: int
     terrainMod: int = 0
     strategyMod: int = 0
     isNight: bool = False
+    isElite: bool = False
+    hasAirSupport: bool = False
 
 @app.post("/api/combat/resolve")
 def run_combat_resolution(data: ResolveCombatRequest):
@@ -127,7 +130,34 @@ def run_combat_resolution(data: ResolveCombatRequest):
         data.defenseValue,
         data.terrainMod,
         data.strategyMod,
-        data.isNight
+        data.isNight,
+        data.isElite,
+        data.hasAirSupport
+    )
+    return result
+
+class CalculateCombatRequest(BaseModel):
+    attackerUnits: List[Dict[str, Any]]
+    supportModifiers: Dict[str, Any]
+    morale: int
+    terrainType: str
+    defenderUnit: Optional[Dict[str, Any]] = None
+    isMandatoryAttack: bool = False
+    eventCiviActive: bool = False
+
+@app.post("/api/combat/calculate")
+def calculate_combat_stats(data: CalculateCombatRequest):
+    """
+    Calculate predicted AV and DV.
+    """
+    result = game_logic.calculate_combat_stats(
+        data.attackerUnits,
+        data.supportModifiers,
+        data.morale,
+        data.terrainType,
+        data.defenderUnit,
+        data.isMandatoryAttack,
+        data.eventCiviActive
     )
     return result
 

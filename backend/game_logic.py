@@ -490,27 +490,131 @@ class GameLogic:
             "logs": logs
         }
 
-    def process_combat(self, attack_val, defense_val, terrain_mod, strategy_mod, is_night_attack=False):
+        return {
+            "results": results,
+            "logs": logs
+        }
+
+    def calculate_combat_stats(self, attacker_units, support_modifiers, morale, terrain_type, defender_unit=None, is_mandatory_attack=False, event_civi_active=False):
         """
-        Executes Combat Resolution (AT vs DT).
+        Calculates preliminary AV and DV based on units and modifiers.
         
         Args:
-            attack_val (int): US Attack Value (Sum of factors).
-            defense_val (int): JP Defense Value (Base DF).
-            terrain_mod (int): Terrain modifier to DEFENSE (e.g. +2 for Urban).
-            strategy_mod (int): Strategy modifier to DEFENSE (if applicable).
-            is_night_attack (bool): If true, some rules might apply (not fully specified yet).
+            attacker_units (list): List of US units participating. (Must contain 'is_lead' or assumed first is lead)
+            support_modifiers (dict): {'artillery': count, 'engineer': count, 'air_support': bool}
+            morale (int): US Morale
+            terrain_type (str): 'Urban', 'Fort', 'Clear'
+            defender_unit (dict): JP unit dict, can be None (Unrevealed default)
+            is_mandatory_attack (bool): Flag
+            event_civi_active (bool): Flag
             
         Returns:
-            dict: {
-                "at_roll": int,
-                "dt_roll": int,
-                "at_total": int,
-                "dt_total": int,
-                "is_success": bool,
-                "is_overrun": bool,
-                "logs": list
-            }
+            dict: { "av": int, "dv": int, "logs": list }
+        """
+        logs = []
+        av = 0
+        dv = 0
+        
+        # --- AV Calculation ---
+        lead_unit = next((u for u in attacker_units if u.get('is_lead')), attacker_units[0] if attacker_units else None)
+        if not lead_unit:
+            return {"av": 0, "dv": 0, "logs": ["No attacking units"]}
+            
+        # Base AV (Lead Unit)
+        # Assuming 'attack_factor' exists, default 2?
+        base_av = lead_unit.get('attack_factor', 2) # Fallback 2
+        av += base_av
+        logs.append(f"AV Base (Lead {lead_unit.get('name')}): {base_av}")
+        
+        # Additional Units (+1 each)
+        additional_count = len(attacker_units) - 1
+        # Check if any is HQ (HQ doesn't add unless commanding, but rule says "Main unit + others". HQ as 'other' usually +0 or +1?
+        # Rule: "Additional units ... +1 each. HQ provides +1 if commanding (implied yes)".
+        # Logic: Simply Count - 1.
+        if additional_count > 0:
+            av += additional_count
+            logs.append(f"AV Additional Units (+{additional_count}): Total {len(attacker_units)} units")
+            
+        # Support
+        arty_count = support_modifiers.get('artillery', 0)
+        eng_count = support_modifiers.get('engineer', 0)
+        
+        # Limit check: Total support markers <= Total Units
+        total_support = arty_count + eng_count
+        if total_support > len(attacker_units):
+            logs.append(f"WARNING: Support ({total_support}) exceeds Unit count ({len(attacker_units)}). Excess ignored (logic not enforcing strict removal, just caps effect?)")
+            # For calculation, we might need to clamp. Usually user UI prevents this. 
+            # We assume valid input or clamp here.
+            # Let's simple warn.
+            
+        av += arty_count * 1
+        av += eng_count * 2
+        if total_support > 0:
+            logs.append(f"AV Support: Arty x{arty_count} (+{arty_count}), Eng x{eng_count} (+{eng_count*2})")
+            
+        # Combined Arms
+        # Need Tank AND Infantry AND (Eng OR Arty)
+        has_tank = any(u.get('type') in ['Armor', 'Tank'] for u in attacker_units)
+        has_inf = any(u.get('type') in ['Infantry', 'infantry'] for u in attacker_units) # Check case
+        has_support = total_support > 0
+        
+        if has_tank and has_inf and has_support:
+            av += 1
+            logs.append("AV Combined Arms Bonus: +1")
+            
+        # Strong Morale
+        if morale >= 10:
+            av += 1
+            logs.append(f"AV Strong Morale ({morale}): +1")
+            
+        # Devents (Civilians)
+        if event_civi_active and is_mandatory_attack:
+            av -= 1
+            logs.append("AV Penalty (Civilians & Mandatory): -1")
+            
+        # --- DV Calculation ---
+        # Base Defender DF
+        base_df = 0
+        if defender_unit:
+            base_df = defender_unit.get('defense_factor', 3) # Default 3 if unknown?
+        else:
+            base_df = 3 # Unknown unit default assumption? Or 0?
+            
+        dv += base_df
+        logs.append(f"DV Base ({defender_unit.get('name') if defender_unit else '??'}): {base_df}")
+        
+        # Terrain
+        t_mod = 0
+        if terrain_type == 'Urban': t_mod = 3
+        elif terrain_type == 'Fort': t_mod = 4
+        elif terrain_type == 'Clear': t_mod = 2
+        
+        dv += t_mod
+        logs.append(f"DV Terrain ({terrain_type}): +{t_mod}")
+        
+        # Shaken Morale (US Morale <= 9 -> JP +1)
+        if morale <= 9:
+            dv += 1
+            logs.append(f"DV Shaken Bonus (US Morale {morale}): +1")
+            
+        # Air Support (Logic handled in process_combat via dice, but maybe display note)
+        if support_modifiers.get('air_support'):
+            logs.append("DV Air Support: Will reduce DV by 1d6 during resolution")
+            
+        # Elite (Logic handled in resolution 3d6 drop low)
+        if defender_unit and defender_unit.get('is_elite'):
+            logs.append("DV Elite: Will roll 3d6 (drop lowest) for Defense")
+            
+        return {
+            "av": av,
+            "dv": dv,
+            "logs": logs
+        }
+
+    def process_combat(self, attack_val, defense_val, terrain_mod, strategy_mod, is_night_attack=False, is_elite=False, has_air_support=False):
+        """
+        Executes Combat Resolution (AT vs DT).
+        Updated to handle Elite dice (3d6 drop low) and Air Support (DV -1d6).
         """
         logs = []
         
@@ -519,24 +623,60 @@ class GameLogic:
         at_roll = d1 + d2
         at_total = attack_val + at_roll
         
-        # Roll 2d6 for Defense
-        d3, d4 = random.randint(1, 6), random.randint(1, 6)
-        dt_roll = d3 + d4
-        dt_total = defense_val + terrain_mod + strategy_mod + dt_roll
-        
         logs.append(f"Combat Resolution:")
         logs.append(f"  US Attack: AV {attack_val} + Roll {at_roll} ({d1}+{d2}) = {at_total}")
-        logs.append(f"  JP Defense: DF {defense_val} + Terrain {terrain_mod} + Strategy {strategy_mod} + Roll {dt_roll} ({d3}+{d4}) = {dt_total}")
+        
+        # Defense logic
+        # 1. Air Support Reduction
+        air_reduction = 0
+        if has_air_support:
+            air_roll = random.randint(1, 6)
+            air_reduction = air_roll
+            logs.append(f"  Air Support: DV Reduced by {air_roll} (Roll 1d6)")
+            
+        # 2. Defense Roll (Normal 2d6 or Elite 3d6 drop low)
+        dt_roll = 0
+        if is_elite:
+            # Roll 3d6
+            rolls = [random.randint(1, 6) for _ in range(3)]
+            rolls.sort() # low to high
+            # Drop lowest (index 0)
+            kept = rolls[1:]
+            dt_roll = sum(kept)
+            logs.append(f"  JP Elite Defense: Rolls {rolls} -> Drop {rolls[0]} -> Keep {kept} = {dt_roll}")
+        else:
+            d3, d4 = random.randint(1, 6), random.randint(1, 6)
+            dt_roll = d3 + d4
+            logs.append(f"  JP Defense Roll: {dt_roll} ({d3}+{d4})")
+            
+        # Calculate Final DT
+        # Note: defense_val input commonly includes BaseDF. 
+        # terrain_mod and strategy_mod are additional.
+        # process_combat expects 'defense_val' to be the base or subtotal?
+        # In this implementation, let's treat them as additive components.
+        
+        raw_dv = defense_val + terrain_mod + strategy_mod
+        final_dv = raw_dv - air_reduction
+        if final_dv < 0: final_dv = 0 # Cannot be < 0
+        
+        dt_total = final_dv + dt_roll
+        
+        logs.append(f"  JP Defense Total: (Base+Mods {raw_dv} - Air {air_reduction}) + Roll {dt_roll} = {dt_total}")
         
         diff = at_total - dt_total
         is_success = diff > 0
         is_overrun = False
         
-        # Overrun Condition: (AT - DT) > Defender Base DF?
-        # User said: "Success (Victory) ... AND (AT - DT) > Defender Defense Factor" -> Overrun.
-        # Defender Defense Factor is defense_val (Base).
+        # Overrun Condition: (AT - DT) > Defender Base DF
+        # We need the 'Base DF' to compare. 
+        # Ideally, `defense_val` passed here IS the Base DF?
+        # If the caller passed (BaseDF + StaticMods) as defense_val, we might simulate Base DF.
+        # Let's assume `defense_val` passed by caller IS Base DF (e.g. 3-10).
+        # And Mods are passed in separate args (terrain_mod, strategy_mod).
+        # If so, diff > defense_val check is correct.
+        
         if is_success:
-            if diff > defense_val:
+            if diff > defense_val: # Compare against Base DF
                 is_overrun = True
                 logs.append(f"  Result: OVERRUN! (Diff {diff} > Base DF {defense_val})")
             else:

@@ -60,13 +60,20 @@
         - [x] Turn 6: 第44戦車大隊除去。OOAにある場合 Morale -1/unit のペナルティ。
     - [x] **指揮官の運命判定 (Leader Mortality)**:
         - [x] 前ターンOOAのリーダーにつき 1d6 (1-2:KIA, 3-4:Wounded/Return Next, 5-6:Immediate).
-- [ ] **2. ランダムイベント (Random Event Phase)**:
-    - [ ] 3d6 ロールとイベントテーブル参照 (Pause, Civilians, Japanese Attack etc).
-- [ ] **3. 補給フェーズ (Supply Phase)**:
-    - [ ] **生成**: 4d6 ポイント追加 (T1 min 12).
-    - [ ] **消費**: 支援購入(済), 部隊復帰(済), **士気向上** (3pt -> +1 Morale).
-- [ ] **4. 戦闘フェーズ (Combat Phase)**:
-    - [ ] **市街戦チェック (Bloody Streets)**: 争奪中Urban/Fortエリア数×1d6で被害判定。
+- [x] **2. ランダムイベント (Random Event Phase)**:
+    - [x] 3d6 ロールとイベントテーブル参照 (Pause, Civilians, Japanese Attack etc).
+    - [x] **例外処理 (Rule 6.2)**: 第1/9ターンのPause無効、連続Pause無効、岩淵脱出の条件判定を実装済み。
+- [x] **3. 補給フェーズ (Supply Phase)**
+    - [x] 補給ポイント生成 (4d6)
+    - [x] 士気向上アクション (+1 Morale for 3 Supply)
+    - [x] 支援ユニット購入 (Tank, Artillery, Air Support)
+    - [x] ユニット回復 (Out of Action -> Map)
+- [ ] **4. 戦闘フェーズ (Combat Phase)** - *In Progress*
+    - [ ] 市街戦判定 (Bloody Streets) - Phase Start
+    - [ ] インパルスシステム (Activation / Spent)
+    - [ ] 移動ロジック (Movement & Infiltration)
+    - [ ] 戦闘解決 (Combat Resolution tables & dice)
+    - [ ] 勝利条件チェック (Control Points) (Bloody Streets)**: 争奪中Urban/Fortエリア数×1d6で被害判定。
     - [ ] **アクションラウンド (Impulse System)**:
         - [ ] エリア活性化 -> 移動/戦闘 -> Spent化 のループ。
         - [ ] パス or 全ユニットSpentで終了。
@@ -76,12 +83,12 @@
     - [ ] ターンマーカー進行。
 
 ### 2.5 ターン別・例外ルール (Specific Turn Rules)
-- [ ] **Turn 1 例外**:
+- [x] **Turn 1 例外**:
     - [ ] **補給 (Supply)**: 4d6の結果が12未満なら `12` に切り上げ（最低保証）。
-    - [ ] **イベント (Event)**: 'Pause' (行動停止) が出ても 'No Result' として扱う。
-    - [ ] **夜明け (Dawn)**: 増援・撤退・指揮官判定なし。
-- [ ] **Turn 9 例外 (Final Turn)**:
-    - [ ] **イベント (Event)**: 'Pause' は 'No Result' として扱う。
+    - [x] **イベント (Event)**: 'Pause' (行動停止) が出ても 'No Result' として扱う。
+    - [x] **夜明け (Dawn)**: 増援・撤退・指揮官判定なし。
+- [x] **Turn 9 例外 (Final Turn)**:
+    - [x] **イベント (Event)**: 'Pause' は 'No Result' として扱う。
 - [ ] **Turn 1-3 制限**:
     - [ ] **砲兵制限 (Artillery Limit)**: 1戦闘につき最大1枚まで（マッカーサーの制限）。
         - [ ] Turn 4以降は制限解除。
@@ -94,7 +101,7 @@
 ### 3.1 ヘッダー/サイドバー情報パネル
 - [x] **リソース表示**: Supply, Morale, Control数, Turn数を常時表示するパネル作成。
     - [ ] Moraleの状態（Strong/Shaken）を視覚的に強調。
-- [ ] **ランダムイベント表示**: 現在適用中のイベント内容を表示するエリア。
+- [x] **ランダムイベント表示**: 現在適用中のイベント内容を表示するエリア。
 
 ### 3.2 専用ボックスUI
 - [x] **Support Units Box**:

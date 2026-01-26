@@ -255,3 +255,42 @@ class GameLogic:
             "morale": morale,
             "logs": logs
         }
+
+    def process_supply_roll(self, current_turn, current_supply):
+        """
+        Executes Supply Phase Step 1: Supply Generation.
+        
+        Args:
+            current_turn (int): 1-9
+            current_supply (int): Current accumulated supply points
+            
+        Returns:
+            dict: {
+                "roll": int, # Total rolled value
+                "added": int, # Actual amount added (considering min 12 rule)
+                "new_total": int,
+                "logs": list
+            }
+        """
+        logs = []
+        d1, d2, d3, d4 = [random.randint(1, 6) for _ in range(4)]
+        total_roll = d1 + d2 + d3 + d4
+        
+        logs.append(f"Supply Roll (4d6): {d1}+{d2}+{d3}+{d4} = {total_roll}")
+        
+        added_amount = total_roll
+        
+        # Turn 1 Exception: Minimum 12
+        if current_turn == 1 and total_roll < 12:
+            added_amount = 12
+            logs.append(f"Turn 1 Minimum Supply Rule applied: {total_roll} -> 12")
+            
+        new_total = current_supply + added_amount
+        logs.append(f"Supply Points: {current_supply} + {added_amount} = {new_total}")
+        
+        return {
+            "roll": total_roll,
+            "added": added_amount,
+            "new_total": new_total,
+            "logs": logs
+        }

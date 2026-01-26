@@ -80,3 +80,19 @@ def run_random_event_phase(data: RandomEventRequest):
         data.morale
     )
     return result
+    return result
+
+class SupplyRollRequest(BaseModel):
+    currentTurn: int
+    currentSupply: int
+
+@app.post("/api/phase/supply/roll")
+def run_supply_roll(data: SupplyRollRequest):
+    """
+    Endpoint for Supply Phase Step 1: Roll for Supply Points.
+    """
+    result = game_logic.process_supply_roll(
+        data.currentTurn,
+        data.currentSupply
+    )
+    return result

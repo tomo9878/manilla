@@ -137,6 +137,8 @@ function App() {
     const [turn, setTurn] = useState(1);
     const [currentPhase, setCurrentPhase] = useState('Setup'); // Setup, Dawn, Event, Supply, Combat, End
     const [morale, setMorale] = useState(19);
+    const [hasBeenShaken, setHasBeenShaken] = useState(false); // Rule 11.6: Air Support unlock
+    const [supplyRolled, setSupplyRolled] = useState(false); // Track if roll logic is done this turn
 
     // Event State
     const [currentEvent, setCurrentEvent] = useState(null);
@@ -236,6 +238,52 @@ function App() {
             alert("Error processing Dawn Phase. Is backend running?");
         }
     };
+
+
+    // Supply Phase Logic
+    const handleSupplyRoll = async () => {
+        try {
+            const res = await fetch('/api/phase/supply/roll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentTurn: turn, currentSupply: supplyPoints })
+            });
+            const data = await res.json();
+
+            setSupplyPoints(data.new_total);
+            setSupplyRolled(true);
+
+            if (data.logs.length > 0) {
+                alert("Supply Roll Results:\n" + data.logs.join('\n'));
+            }
+        } catch (e) {
+            console.error("Supply Roll Error", e);
+            alert("Error rolling for supply.");
+        }
+    };
+
+    // Auto-check Morale Shaken status
+    useEffect(() => {
+        if (morale <= 9 && !hasBeenShaken) {
+            console.log("Morale Shaken! Air Support Unlocked.");
+            setHasBeenShaken(true);
+        }
+    }, [morale, hasBeenShaken]);
+
+    // Improve Morale Action
+    const handleImproveMorale = () => {
+        if (supplyPoints >= 3 && morale < 19) {
+            setSupplyPoints(prev => prev - 3);
+            setMorale(prev => prev + 1);
+        }
+    };
+
+    // Proceed to Combat
+    const handleProceedToCombat = () => {
+        setCurrentPhase('Combat');
+        setSupplyRolled(false); // Reset flg for next turn
+    };
+
 
 
     // Recover Unit Handler
@@ -355,11 +403,22 @@ function App() {
         setSupplyPoints(prev => Math.max(0, prev + amount));
     };
 
+    // Buy Support Logic
     const handleBuySupport = (type) => {
+        // Can only buy in Supply Phase
+        if (currentPhase !== 'Supply') return;
+
         const unit = supportUnits[type];
         if (!unit) return;
+
+        // Air Support only if unlocked
+        if (type === 'air' && !hasBeenShaken) {
+            alert("Air Support is locked until US Morale drops to 9 (Shaken).");
+            return;
+        }
+
         // Check supply and max limit (Total = available + used)
-        // Wait, "Max" refers to physical counters. So (available + used) < max
+        // Rule: Can buy up to limit.
         if (supplyPoints >= unit.cost && (unit.available + unit.used) < unit.max) {
             setSupplyPoints(prev => prev - unit.cost);
             setSupportUnits(prev => ({
@@ -1152,10 +1211,6 @@ function App() {
                         <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Supply</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4caf50' }}>{supplyPoints}</div>
-                            <div style={{ display: 'flex', gap: '2px' }}>
-                                <button onClick={() => handleAdjustSupply(1)} style={{ padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}>+</button>
-                                <button onClick={() => handleAdjustSupply(-1)} style={{ padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}>-</button>
-                            </div>
                         </div>
                     </div>
 
@@ -1172,57 +1227,107 @@ function App() {
                     </div>
                 </div>
 
+                {/* Supply Actions */}
+                <div style={{ marginBottom: '20px' }}>
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: '#8bc34a' }}>Supply Actions</h3>
+                    <div style={{ padding: '10px', background: '#333', borderRadius: '4px', border: '1px solid #555' }}>
+                        {currentPhase === 'Supply' && !supplyRolled && (
+                            <div style={{ marginBottom: '10px' }}>
+                                <button onClick={handleSupplyRoll} style={{ width: '100%', background: '#ff9800', color: 'white', padding: '8px', border: 'none', cursor: 'pointer', borderRadius: '4px' }}>
+                                    Roll Supply (4d6)
+                                </button>
+                            </div>
+                        )}
+
+                        {currentPhase === 'Supply' && supplyRolled && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                <div style={{ fontSize: '0.8rem', color: '#ccc', fontStyle: 'italic' }}>
+                                    Spend supply points to buy support, recover units, or boost morale.
+                                </div>
+
+                                <button
+                                    onClick={handleImproveMorale}
+                                    disabled={supplyPoints < 3 || morale >= 19}
+                                    style={{
+                                        width: '100%',
+                                        background: supplyPoints >= 3 && morale < 19 ? '#2196f3' : '#555',
+                                        color: 'white',
+                                        padding: '8px',
+                                        border: 'none',
+                                        cursor: supplyPoints >= 3 && morale < 19 ? 'pointer' : 'not-allowed',
+                                        borderRadius: '4px'
+                                    }}
+                                >
+                                    +1 Morale ($3) {morale >= 19 ? '(Max)' : ''}
+                                </button>
+
+                                <hr style={{ borderColor: '#555', width: '100%', margin: '5px 0' }} />
+
+                                <button
+                                    onClick={handleProceedToCombat}
+                                    style={{
+                                        width: '100%',
+                                        background: '#4caf50',
+                                        color: 'white',
+                                        padding: '12px',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        borderRadius: '4px',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    End Supply Phase (To Combat) &gt;
+                                </button>
+                            </div>
+                        )}
+
+                        {currentPhase !== 'Supply' && (
+                            <div style={{ fontSize: '0.8rem', color: '#777' }}>
+                                Supply actions available in Supply Phase.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Support Units</h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-                    {Object.values(supportUnits).map(unit => (
-                        <div key={unit.type} style={{ background: '#2a2a2a', padding: '10px', borderRadius: '4px', border: '1px solid #555' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                                <span style={{ fontWeight: 'bold', color: '#ddd' }}>{unit.name}</span>
-                                <span style={{ fontSize: '0.8rem', color: '#aaa' }}>Cost: {unit.cost}</span>
-                            </div>
+                    {Object.keys(supportUnits).map(key => {
+                        const s = supportUnits[key];
+                        // Determine if buyable
+                        const canBuy = currentPhase === 'Supply' && supplyRolled && supplyPoints >= s.cost && (s.available + s.used) < s.max;
+                        // Special lock for Air
+                        const isLocked = key === 'air' && !hasBeenShaken;
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
-                                <div>Avail: <span style={{ color: '#fff' }}>{unit.available}</span> <span style={{ color: '#666' }}>/ {unit.max}</span></div>
-                                <div>Used: <span style={{ color: '#fa8' }}>{unit.used}</span></div>
+                        return (
+                            <div key={key} style={{ padding: '10px', background: '#2a2a2a', borderRadius: '4px', border: '1px solid #555', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div>
+                                    <div style={{ fontWeight: 'bold', color: '#ddd' }}>{s.name}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#aaa' }}>
+                                        Avail: <span style={{ color: '#fff' }}>{s.available}</span> / Used: <span style={{ color: '#fa8' }}>{s.used}</span> (Max: {s.max})
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: '#aaa' }}>Cost: {s.cost}</div>
+                                </div>
+                                <div>
+                                    <button
+                                        onClick={() => handleBuySupport(key)}
+                                        disabled={!canBuy || isLocked}
+                                        style={{
+                                            padding: '4px 8px',
+                                            fontSize: '0.8rem',
+                                            cursor: (!canBuy || isLocked) ? 'not-allowed' : 'pointer',
+                                            background: (!canBuy || isLocked) ? '#555' : '#8bc34a',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '2px'
+                                        }}
+                                    >
+                                        Buy
+                                    </button>
+                                </div>
                             </div>
-
-                            <div style={{ display: 'flex', gap: '5px' }}>
-                                <button
-                                    onClick={() => handleBuySupport(unit.type)}
-                                    disabled={supplyPoints < unit.cost || (unit.available + unit.used) >= unit.max}
-                                    style={{
-                                        flex: 1,
-                                        padding: '5px',
-                                        cursor: 'pointer',
-                                        background: (supplyPoints >= unit.cost && (unit.available + unit.used) < unit.max) ? '#2e7d32' : '#555',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '3px',
-                                        opacity: (supplyPoints >= unit.cost && (unit.available + unit.used) < unit.max) ? 1 : 0.5
-                                    }}
-                                >
-                                    Buy
-                                </button>
-                                <button
-                                    onClick={() => handleUseSupport(unit.type)}
-                                    disabled={unit.available <= 0}
-                                    style={{
-                                        flex: 1,
-                                        padding: '5px',
-                                        cursor: 'pointer',
-                                        background: unit.available > 0 ? '#d84315' : '#555',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '3px',
-                                        opacity: unit.available > 0 ? 1 : 0.5
-                                    }}
-                                >
-                                    Use
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Out of Action</h3>
@@ -1253,45 +1358,39 @@ function App() {
 
             {/* Context Menu */}
             {contextMenu && (
-                <div style={{
-                    position: 'fixed',
-                    top: contextMenu.y,
-                    left: contextMenu.x,
-                    background: '#333',
-                    border: '1px solid #555',
-                    borderRadius: '4px',
-                    padding: '5px',
-                    zIndex: 1000,
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
-                    color: 'white',
-                    minWidth: '150px'
-                }}
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: contextMenu.y,
+                        left: contextMenu.x,
+                        background: '#333',
+                        border: '1px solid #555',
+                        borderRadius: '4px',
+                        padding: '5px',
+                        zIndex: 1000,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                        color: 'white',
+                        minWidth: '150px'
+                    }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {contextMenu.type === 'recover' ? (
+                    {contextMenu.type === 'recover' && (
                         <button
                             onClick={() => handleRecoverUnit(contextMenu.unitId)}
                             style={{ display: 'block', width: '100%', padding: '8px', background: '#4caf50', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
                         >
                             Recover (2 Supply)
                         </button>
-                    ) : contextMenu.type === 'area' ? (
+                    )}
+                    {contextMenu.type === 'area' && (
                         <button
                             onClick={() => handleToggleControl(contextMenu.areaName)}
-                            style={{
-                                display: 'block',
-                                width: '100%',
-                                padding: '8px',
-                                background: usControlledAreas.includes(contextMenu.areaName) ? '#d32f2f' : '#2196f3',
-                                color: 'white',
-                                border: 'none',
-                                cursor: 'pointer',
-                                borderRadius: '2px'
-                            }}
+                            style={{ display: 'block', width: '100%', padding: '8px', background: usControlledAreas.includes(contextMenu.areaName) ? '#d32f2f' : '#2196f3', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
                         >
                             {usControlledAreas.includes(contextMenu.areaName) ? 'JP Recapture' : 'US Take Control'}
                         </button>
-                    ) : (
+                    )}
+                    {contextMenu.type !== 'recover' && contextMenu.type !== 'area' && (
                         <button
                             onClick={() => handleRemoveUnit(contextMenu.unitId)}
                             style={{ display: 'block', width: '100%', padding: '8px', background: '#f44336', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
@@ -1301,7 +1400,6 @@ function App() {
                     )}
                 </div>
             )}
-
         </div>
     );
 }

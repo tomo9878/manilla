@@ -122,6 +122,7 @@ function App() {
     const [hoveredArea, setHoveredArea] = useState(null);
     const [hoveredStack, setHoveredStack] = useState(null); // { units: [], pointer: {x, y} }
     const [backendStatus, setBackendStatus] = useState('Checking...');
+    const [usControl, setUsControl] = useState(3); // Start with 3 areas
 
     useEffect(() => {
         // Start with empty board (user must click Start Game)
@@ -705,8 +706,8 @@ function App() {
                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2196f3' }}>19 (Strong)</div>
                     </div>
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>JP Defense</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f44336' }}>+0</div>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Control</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControl} (Goal: 34)</div>
                     </div>
                 </div>
 

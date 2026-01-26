@@ -110,7 +110,7 @@ const MapImage = ({ onImageLoad }) => {
 };
 
 function App() {
-    const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+    const [stageSize, setStageSize] = useState({ width: Math.floor(window.innerWidth * 0.6), height: window.innerHeight });
     const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
     const [scale, setScale] = useState(0.25); // Zoom out a bit more initially
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -131,7 +131,7 @@ function App() {
     // Restore effects and handlers
     useEffect(() => {
         const handleResize = () => {
-            setStageSize({ width: window.innerWidth, height: window.innerHeight });
+            setStageSize({ width: Math.floor(window.innerWidth * 0.6), height: window.innerHeight });
         };
         window.addEventListener('resize', handleResize);
 
@@ -150,14 +150,15 @@ function App() {
 
         // Calculate scale to fit the image within the window
         if (size.width > 0 && size.height > 0) {
-            const scaleX = window.innerWidth / size.width;
+            const stageW = Math.floor(window.innerWidth * 0.6);
+            const scaleX = stageW / size.width;
             const scaleY = window.innerHeight / size.height;
             const newScale = Math.min(scaleX, scaleY) * 0.9; // 90% fit
 
             setScale(newScale);
 
             // Center it
-            const newX = (window.innerWidth - size.width * newScale) / 2;
+            const newX = (stageW - size.width * newScale) / 2;
             const newY = (window.innerHeight - size.height * newScale) / 2;
             setPosition({ x: newX, y: newY });
         }
@@ -490,60 +491,70 @@ function App() {
     });
 
     return (
-        <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#222' }}>
-            {/* UI Overlay */}
+        <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', background: '#222' }}>
+
+            {/* LEFT PANEL: Controls & Status (20%) */}
             <div style={{
-                position: 'absolute',
-                top: 20,
-                left: 20,
-                zIndex: 10,
-                background: 'rgba(0,0,0,0.8)',
-                color: 'white',
+                flex: '0 0 20%',
+                background: '#1e1e1e',
+                borderRight: '1px solid #444',
                 padding: '1rem',
-                borderRadius: '8px',
-                maxWidth: '300px',
+                color: '#eee',
+                overflowY: 'auto',
+                boxSizing: 'border-box'
             }}>
-                <h2 style={{ margin: '0 0 10px 0', fontSize: '1.2rem', color: '#ffcc00' }}>Manila 1945</h2>
-                <div style={{ fontSize: '0.9rem', marginBottom: '5px' }}>Backend: <span style={{ color: backendStatus === 'healthy' ? '#0f0' : '#f00' }}>{backendStatus}</span></div>
-                <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
-                    Map WxH: {mapSize.width} x {mapSize.height}<br />
-                    Scale: {scale.toFixed(4)}<br />
-                    Pos: {position.x.toFixed(0)}, {position.y.toFixed(0)}
+                <h2 style={{ margin: '0 0 10px 0', fontSize: '1.5rem', color: '#ffcc00' }}>Manila 1945</h2>
+
+                <div style={{ paddingBottom: '1rem', borderBottom: '1px solid #444', marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.9rem', marginBottom: '5px' }}>
+                        Backend: <span style={{ color: backendStatus === 'healthy' ? '#0f0' : '#f00' }}>{backendStatus}</span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
+                        Map WxH: {mapSize.width} x {mapSize.height}<br />
+                        Scale: {scale.toFixed(4)}<br />
+                        Pos: {position.x.toFixed(0)}, {position.y.toFixed(0)}
+                    </div>
+                    {/* Fallback raw image check */}
+                    <div style={{ marginTop: '5px', border: '1px solid white', width: '50px', height: '50px', overflow: 'hidden' }}>
+                        <img src="/map.jpg" alt="Check" style={{ width: '100%' }} />
+                    </div>
                 </div>
-                {/* Fallback raw image check */}
-                <div style={{ marginTop: '5px', border: '1px solid white', width: '50px', height: '50px', overflow: 'hidden' }}>
-                    <img src="/map.jpg" alt="Check" style={{ width: '100%' }} />
-                </div>
-                <div style={{ marginTop: '10px', borderTop: '1px solid #555', paddingTop: '10px' }}>
+
+                <div style={{ marginBottom: '1rem' }}>
                     <strong>Selected Area:</strong>
                     {selectedArea ? (
-                        <div>
-                            <div style={{ fontSize: '1.5rem', color: '#00ccff' }}>{selectedArea.name}</div>
-                            <div style={{ color: '#aaa' }}>Terrain: {selectedArea.terrain}</div>
+                        <div style={{ marginTop: '5px', padding: '10px', background: '#333', borderRadius: '4px' }}>
+                            <div style={{ fontSize: '1.2rem', color: '#00ccff', fontWeight: 'bold' }}>{selectedArea.name}</div>
+                            <div style={{ color: '#aaa', marginTop: '5px' }}>Terrain: {selectedArea.terrain}</div>
                         </div>
                     ) : (
-                        <div style={{ color: '#777' }}>Click an area...</div>
+                        <div style={{ color: '#777', fontStyle: 'italic', marginTop: '5px' }}>Click an area on the map...</div>
                     )}
                 </div>
-                <div style={{ marginTop: '10px', fontSize: '0.8rem', color: '#888' }}>
-                    Wheel to zoom, Drag to pan<br />
-                    Double-click unit to flip
+
+                <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: '1.5rem' }}>
+                    <strong>Controls:</strong><br />
+                    • Wheel to Zoom<br />
+                    • Drag to Pan<br />
+                    • Click Stack to Rotate<br />
+                    • Double-click Unit to Flip
                 </div>
 
                 {/* Action Buttons */}
-                <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid #555', display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
                     <button
                         onClick={handleStartGame}
                         style={{
                             width: '100%',
-                            padding: '10px',
-                            background: '#d32f2f', // Red for Start
+                            padding: '12px',
+                            background: '#d32f2f', // Red
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: 'pointer',
                             fontSize: '1rem',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                         }}
                     >
                         Start Game
@@ -552,14 +563,15 @@ function App() {
                         onClick={handleEndPhase}
                         style={{
                             width: '100%',
-                            padding: '10px',
-                            background: '#0066cc',
+                            padding: '12px',
+                            background: '#0066cc', // Blue
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: 'pointer',
                             fontSize: '1rem',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                         }}
                     >
                         End Phase
@@ -567,98 +579,149 @@ function App() {
                 </div>
             </div>
 
-            {/* Stack View Overlay */}
-            {hoveredStack && (
-                <div style={{
-                    position: 'absolute',
-                    top: hoveredStack.pointer.y + 20,
-                    left: hoveredStack.pointer.x + 20,
-                    zIndex: 100,
-                    pointerEvents: 'none',
-                    background: 'rgba(0,0,0,0.85)',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    border: '1px solid #999',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    gap: '8px',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
-                }}>
-                    {hoveredStack.units.map(u => (
-                        <div key={u.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <img
-                                src={`/images/${(u.status === 'spent' && u.backImage) ? u.backImage : u.frontImage}`}
-                                alt={u.id}
-                                style={{ width: '100px', height: '100px', borderRadius: '4px' }}
-                            />
-                            <div style={{ color: '#eee', fontSize: '0.75rem', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {u.id}
+            {/* CENTER PANEL: Map Stage (60%) */}
+            <div style={{
+                flex: '0 0 60%',
+                position: 'relative',
+                background: '#333',
+                overflow: 'hidden'
+            }}>
+                {/* Check if Hovered Stack Overlay needs to be here */}
+                {/* Stack View Overlay - Positioned Absolute relative to this container works if pointer is relative to Stage */}
+                {hoveredStack && (
+                    <div style={{
+                        position: 'absolute',
+                        top: hoveredStack.pointer.y + 20,
+                        left: hoveredStack.pointer.x + 20,
+                        zIndex: 100,
+                        pointerEvents: 'none',
+                        background: 'rgba(0,0,0,0.85)',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        border: '1px solid #999',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        gap: '8px',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
+                    }}>
+                        {hoveredStack.units.map(u => (
+                            <div key={u.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <img
+                                    src={`/images/${(u.status === 'spent' && u.backImage) ? u.backImage : u.frontImage}`}
+                                    alt={u.id}
+                                    style={{ width: '100px', height: '100px', borderRadius: '4px' }}
+                                />
+                                <div style={{ color: '#eee', fontSize: '0.75rem', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {u.id}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                )}
+
+                <Stage
+                    width={stageSize.width}
+                    height={stageSize.height}
+                    draggable
+                    onWheel={handleWheel}
+                    scaleX={scale}
+                    scaleY={scale}
+                    x={position.x}
+                    y={position.y}
+                    onDragEnd={(e) => {
+                        // Only update stage position if the stage itself was dragged
+                        if (e.target === e.target.getStage()) {
+                            setPosition({ x: e.target.x(), y: e.target.y() });
+                        }
+                    }}
+                >
+                    <Layer imageSmoothingEnabled={false}>
+                        <Rect x={-5000} y={-5000} width={10000} height={10000} fill="#333" />
+                        <MapImage onImageLoad={handleImageLoad} />
+                        {mapData.map((area, i) => (
+                            <Line
+                                key={i}
+                                points={area.points}
+                                fill={selectedArea?.name === area.name ? 'rgba(255, 0, 0, 0.4)' : (hoveredArea === area.name ? 'rgba(255, 255, 255, 0.2)' : 'transparent')}
+                                stroke={selectedArea?.name === area.name ? 'red' : 'rgba(255,255,0,0.3)'}
+                                strokeWidth={3}
+                                closed
+                                onMouseEnter={() => {
+                                    document.body.style.cursor = 'pointer';
+                                    setHoveredArea(area.name);
+                                }}
+                                onMouseLeave={() => {
+                                    document.body.style.cursor = 'default';
+                                    setHoveredArea(null);
+                                }}
+                                onClick={() => setSelectedArea(area)}
+                                onTap={() => setSelectedArea(area)}
+                            />
+                        ))}
+
+                        {/* Units Render Loop */}
+                        {sortedUnits.map((unit) => (
+                            <UnitCounter
+                                key={unit.id}
+                                unit={unit}
+                                x={unit.x}
+                                y={unit.y}
+                                indexInStack={stackMap[unit.id] || 0}
+                                onDragStart={handleUnitDragStart}
+                                onDragEnd={handleUnitDragEnd}
+                                onClick={handleUnitClick}
+                                onDblClick={handleUnitDblClick}
+                                onHover={handleUnitHover}
+                            />
+                        ))}
+                    </Layer>
+                </Stage>
+            </div>
+
+            {/* RIGHT PANEL: Counters & Resources (20%) */}
+            <div style={{
+                flex: '0 0 20%',
+                background: '#1e1e1e',
+                borderLeft: '1px solid #444',
+                padding: '1rem',
+                color: '#eee',
+                overflowY: 'auto',
+                boxSizing: 'border-box'
+            }}>
+                <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Resources</h3>
+
+                {/* Placeholders for Future Implementation */}
+                <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
+                    <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>Turn</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>1</div>
+                    </div>
+                    <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Supply</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4caf50' }}>12</div>
+                    </div>
+                    <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Morale</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2196f3' }}>19 (Strong)</div>
+                    </div>
+                    <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>JP Defense</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#f44336' }}>+0</div>
+                    </div>
                 </div>
-            )
-            }
 
-            <Stage
-                width={stageSize.width}
-                height={stageSize.height}
-                draggable
-                onWheel={handleWheel}
-                scaleX={scale}
-                scaleY={scale}
-                x={position.x}
-                y={position.y}
-                onDragEnd={(e) => {
-                    // Only update stage position if the stage itself was dragged
-                    if (e.target === e.target.getStage()) {
-                        setPosition({ x: e.target.x(), y: e.target.y() });
-                    }
-                }}
-            >
-                <Layer imageSmoothingEnabled={false}>
-                    <Rect x={-5000} y={-5000} width={10000} height={10000} fill="#333" />
-                    <MapImage onImageLoad={handleImageLoad} />
-                    {mapData.map((area, i) => (
-                        <Line
-                            key={i}
-                            points={area.points}
-                            fill={selectedArea?.name === area.name ? 'rgba(255, 0, 0, 0.4)' : (hoveredArea === area.name ? 'rgba(255, 255, 255, 0.2)' : 'transparent')}
-                            stroke={selectedArea?.name === area.name ? 'red' : 'rgba(255,255,0,0.3)'}
-                            strokeWidth={3}
-                            closed
-                            onMouseEnter={() => {
-                                document.body.style.cursor = 'pointer';
-                                setHoveredArea(area.name);
-                            }}
-                            onMouseLeave={() => {
-                                document.body.style.cursor = 'default';
-                                setHoveredArea(null);
-                            }}
-                            onClick={() => setSelectedArea(area)}
-                            onTap={() => setSelectedArea(area)}
-                        />
-                    ))}
+                <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Support Units</h3>
+                <div style={{ background: '#2a2a2a', padding: '20px', borderRadius: '4px', textAlign: 'center', marginBottom: '20px', border: '1px dashed #555' }}>
+                    <div style={{ color: '#777', fontStyle: 'italic' }}>Support Unit Pool<br />(Artillery, Engineer, Air)</div>
+                </div>
 
-                    {/* Units */}
-                    {/* Units - Render loop */}
-                    {sortedUnits.map((unit) => (
-                        <UnitCounter
-                            key={unit.id}
-                            unit={unit}
-                            x={unit.x}
-                            y={unit.y}
-                            indexInStack={stackMap[unit.id] || 0}
-                            onDragStart={handleUnitDragStart}
-                            onDragEnd={handleUnitDragEnd}
-                            onClick={handleUnitClick}
-                            onDblClick={handleUnitDblClick}
-                            onHover={handleUnitHover}
-                        />
-                    ))}
-                </Layer>
-            </Stage>
-        </div >
+                <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Out of Action</h3>
+                <div style={{ background: '#2a2a2a', padding: '20px', borderRadius: '4px', textAlign: 'center', border: '1px dashed #555' }}>
+                    <div style={{ color: '#777', fontStyle: 'italic' }}>No units lost</div>
+                </div>
+            </div>
+
+        </div>
     );
 }
 

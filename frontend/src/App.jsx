@@ -159,7 +159,16 @@ function App() {
     };
 
     const handleRemoveUnit = (unitId) => {
-        setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'out_of_action' } : u));
+        const unit = units.find(u => u.id === unitId);
+        if (!unit) return;
+
+        if (unit.faction === 'JP') {
+            // Permanently remove JP units (Eliminated)
+            setUnits(prev => prev.filter(u => u.id !== unitId));
+        } else {
+            // Send US units to Out of Action
+            setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'out_of_action' } : u));
+        }
         setContextMenu(null);
     };
 
@@ -989,7 +998,7 @@ function App() {
                             onClick={() => handleRemoveUnit(contextMenu.unitId)}
                             style={{ display: 'block', width: '100%', padding: '8px', background: '#f44336', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
                         >
-                            Send to Out of Action
+                            {units.find(u => u.id === contextMenu.unitId)?.faction === 'JP' ? 'Eliminate Unit' : 'Send to Out of Action'}
                         </button>
                     )}
                 </div>

@@ -164,10 +164,10 @@ function App() {
     };
 
     const handleUnitContextMenu = (e, unitId) => {
-        // e is native event from Konva
+        // e is already the native event (passed from UnitCounter)
         setContextMenu({
-            x: e.evt.clientX,
-            y: e.evt.clientY,
+            x: e.clientX,
+            y: e.clientY,
             unitId,
             type: 'remove' // Action available for map units
         });

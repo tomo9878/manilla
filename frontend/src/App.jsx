@@ -174,7 +174,7 @@ function App() {
         // Heuristic: Check for specific Commander names or 'HQ'
         const isLeader = /HQ|Gen|Leader|Beightler|Chase|Haugen|Griswold/i.test(unit.name) || /HQ/i.test(unit.id);
 
-        if (isLeader) {
+        if (false) { // Leader check disabled (deferred to Dawn Phase)
             const roll = Math.floor(Math.random() * 6) + 1;
             let msg = `Leader Casualty Check (${unit.name}): Rolled ${roll}\n\n`;
 
@@ -191,10 +191,9 @@ function App() {
                 alert(msg);
                 // No status change
             }
-        } else {
-            // Normal US Unit -> OOA
-            setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'out_of_action' } : u));
         }
+        // Normal US Unit -> OOA
+        setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'out_of_action' } : u));
 
         setContextMenu(null);
     };

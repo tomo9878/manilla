@@ -1,8 +1,127 @@
-import random
+import json
+import os
 
 class GameLogic:
     def __init__(self):
-        pass
+        self.adjacency = {}
+        try:
+            # Load adjacency data
+            # Assuming backend/adjacency.json relative to current working dir or file location
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            adj_path = os.path.join(base_dir, 'adjacency.json')
+            if os.path.exists(adj_path):
+                with open(adj_path, 'r', encoding='utf-8') as f:
+                    self.adjacency = json.load(f)
+            else:
+                # Fallback for dev/testing if file not found in module dir
+                if os.path.exists('backend/adjacency.json'):
+                    with open('backend/adjacency.json', 'r', encoding='utf-8') as f:
+                        self.adjacency = json.load(f)
+                else:
+                    print("Warning: adjacency.json not found.")
+        except Exception as e:
+            print(f"Error loading adjacency: {e}")
+
+    def get_adjacency(self, area_name):
+        return self.adjacency.get(area_name, [])
+
+    def calculate_movement_cost(self, from_area, to_area, all_units):
+        """
+        Calculates MP cost and validation.
+        
+        Args:
+            from_area (str): Name of start area
+            to_area (str): Name of destination area
+            all_units (list): List of all units dicts
+            
+        Returns:
+            dict: {
+                "valid": bool,
+                "cost": int,
+                "message": str,
+                "mandatory_attack": bool
+            }
+        """
+        # 1. Adjacency Check
+        if to_area not in self.get_adjacency(from_area):
+            return {"valid": False, "cost": 0, "message": "Areas are not adjacent.", "mandatory_attack": False}
+
+        # Identify JP units in To Area and Neighboring Areas
+        jp_in_target = [u for u in all_units if u.get('location') == to_area and u.get('faction') == 'JP' and u.get('status') != 'eliminated']
+        
+        is_target_vacant = len(jp_in_target) == 0
+        
+        target_cost = 1 # Base
+        
+        # Determine Target State
+        has_unrevealed_jp = any(u.get('status') == 'fresh' for u in jp_in_target) # Assuming 'fresh' for hidden/unrevealed side? Or specific 'unrevealed'?
+        # In Rules: Unrevealed (Unit side not shown?) -> Usually represented as specific status or 'fresh' side 2?
+        # User said: "Fresh (表面)", "Spent (裏面)".
+        # For JP, Unrevealed usually means "Unknown unit" (Hidden).
+        # Assuming JP units start as 'fresh' (Hidden/Unrevealed) and become 'revealed' (some status?).
+        # User logic: "未判明 (Unrevealed)" -> 4 MF. "判明済み (Revealed)" -> 3 MF.
+        # We need a field 'is_revealed' or similar. 
+        # If not present, default to Unrevealed (Harder)? Or implementation detail.
+        # Let's assume a 'revealed' property in unit dict, defaulting to False.
+        
+        if not is_target_vacant:
+            # JP is present
+            if any(not u.get('is_revealed', False) for u in jp_in_target):
+                target_cost = 4 # Unrevealed present
+            else:
+                target_cost = 3 # All revealed
+        else:
+            # Vacant, check Neighbors for JP ZOC behavior (Rule: Adjacent to JP -> 2 MF)
+            # We need neighbors of To Area
+            to_neighbors = self.get_adjacency(to_area)
+            jp_in_neighbors = [u for u in all_units if u.get('location') in to_neighbors and u.get('faction') == 'JP' and u.get('status') != 'eliminated']
+            
+            if jp_in_neighbors:
+                target_cost = 2
+            else:
+                target_cost = 1
+
+        # Calculate Mandatory Attack
+        # "Entering an area with JP units" -> Mandatory Attack if it wasn't contested before?
+        # The logic: If we move INTO a JP occupied area, it is an attack move.
+        is_attack_move = not is_target_vacant
+        
+        return {
+            "valid": True,
+            "cost": target_cost,
+            "message": "OK",
+            "mandatory_attack": is_attack_move
+        }
+
+    def validate_stacking(self, to_area, all_units):
+        """
+        Checks stacking limits.
+        Rule: Max 6 combat units (Infantry/Tank). HQ does not count.
+        Exception: Areas 1, 2, 30 have no limit.
+        """
+        if to_area in ["Area 1", "Area 2", "Area 30"]:
+            return True
+            
+        us_in_target = [u for u in all_units if u.get('location') == to_area and u.get('faction') != 'JP' and u.get('status') not in ['eliminated', 'out_of_action', 'future']]
+        
+        # Count counting units
+        count = 0
+        for u in us_in_target:
+            # Check type. Assuming 'type' field exists.
+            u_type = u.get('type', 'Unit')
+            if u_type in ['Infantry', 'Armor', 'Tank', 'Unit']: # Default Unit counts
+                if u.get('is_hq', False) or 'HQ' in u.get('name', ''):
+                    continue # HQ doesn't count
+                count += 1
+                
+        # We are validating BEFORE the moving unit arrives? Or including it?
+        # Usually validating including the new unit.
+        # If client sends all_units INCLUDING the moved unit in the new location, simply count.
+        # If client sends state BEFORE move, we add 1.
+        # Let's assume validation happens separately.
+        
+        return count <= 6 
+
 
     def process_dawn_phase(self, current_turn, units, morale):
         """
@@ -367,5 +486,85 @@ class GameLogic:
             
         return {
             "results": results,
+            "logs": logs
+        }
+
+    def process_overrun_check(self, attack_total, defense_total, defender_df):
+        """
+        Determines if an Overrun occurs based on combat values.
+        Rule: Overrun occurs if Result is Success AND (AT - DT) > Defender DF.
+        Assumption: 'Success' typically means AT > DT.
+        
+        Args:
+            attack_total (int): Total Attack Factors (after shifts).
+            defense_total (int): Total Defense Factors (Terrain + Units).
+            defender_df (int): Defense Factor of the defending unit structure (Japanese DF).
+            
+        Returns:
+            dict: {
+                "diff": int,
+                "is_success": bool,
+                "is_overrun": bool,
+                "log": str
+            }
+        """
+        diff = attack_total - defense_total
+        
+        # Determine Success (Generic rule: Attacker > Defender)
+        # In many CRT systems, specific odds are needed, but for Overrun calculation:
+        is_success = diff > 0
+        
+        is_overrun = False
+        if is_success:
+            if diff > defender_df:
+                is_overrun = True
+        
+        log_msg = f"Combat Stats: AT {attack_total} vs DT {defense_total} (Diff {diff}). Defender DF {defender_df}."
+        if is_overrun:
+            log_msg += " -> OVERRUN! (Diff > DF)"
+        elif is_success:
+            log_msg += " -> Success (No Overrun)"
+        else:
+            log_msg += " -> Failed/Stalemate"
+            
+        return {
+            "diff": diff,
+            "is_success": is_success,
+            "is_overrun": is_overrun,
+            "log": log_msg
+        }
+
+    def process_end_combat_phase(self, units, morale):
+        """
+        Resets all Spent units to Fresh and reduces Morale by 1.
+        
+        Returns:
+            dict: {
+                "units": list,
+                "morale": int,
+                "logs": list
+            }
+        """
+        logs = []
+        logs.append("--- End of Combat Phase ---")
+        
+        updated_units = []
+        flip_count = 0
+        
+        for u in units:
+            if u.get('status') == 'spent':
+                u['status'] = 'fresh'
+                flip_count += 1
+            updated_units.append(u)
+            
+        logs.append(f"Reset {flip_count} Spent units to Fresh.")
+        
+        # Rule: Morale -1 at end of phase
+        new_morale = morale - 1
+        logs.append(f"Morale Check: {morale} -> {new_morale} (-1 for Phase End)")
+        
+        return {
+            "units": updated_units,
+            "morale": new_morale,
             "logs": logs
         }

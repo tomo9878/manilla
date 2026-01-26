@@ -108,3 +108,95 @@ def run_bloody_streets_check(data: BloodyStreetsRequest):
     result = game_logic.process_bloody_streets_check(data.areaData)
     return result
 
+
+class OverrunCheckRequest(BaseModel):
+    attackTotal: int
+    defenseTotal: int
+    defenderDF: int
+
+@app.post("/api/combat/overrun_check")
+def run_overrun_check(data: OverrunCheckRequest):
+    """
+    Endpoint for helper logic to check if combat values result in Overrun.
+    """
+    result = game_logic.process_overrun_check(
+        data.attackTotal,
+        data.defenseTotal,
+        data.defenderDF
+    )
+    return result
+
+class EndCombatRequest(BaseModel):
+    units: List[Unit]
+    morale: int
+
+@app.post("/api/phase/end_combat")
+def run_end_combat_phase(data: EndCombatRequest):
+    """
+    Endpoint for End of Combat Phase (Reset units, Morale -1).
+    """
+    # Convert Pydantic models to list of dicts
+    units_dict = [u.dict() for u in data.units]
+    
+    result = game_logic.process_end_combat_phase(
+        units_dict,
+        data.morale
+    )
+    return result
+
+
+class ValidateMoveRequest(BaseModel):
+    fromArea: str
+    toArea: str
+    units: List[Dict[str, Any]] # Must include 'location', 'faction', 'status'
+
+@app.post("/api/combat/validate_move")
+def validate_move(data: ValidateMoveRequest):
+    """
+    Validate movement options and calculate cost.
+    Requires units to have 'location' field populated.
+    """
+    # 1. Calculate Cost & Adjacency
+    result = game_logic.calculate_movement_cost(
+        data.fromArea,
+        data.toArea,
+        data.units
+    )
+    
+    if not result['valid']:
+        return result
+        
+    # Check limit
+    # Logic: count existing US units in toArea
+    # Stack limit is 6.
+    
+    # Count current US units in target area
+    us_in_target = [u for u in data.units 
+                    if u.get('location') == data.toArea 
+                    and u.get('faction') != 'JP' 
+                    and u.get('status') not in ['eliminated', 'out_of_action', 'future']]
+                    
+    # Filter types (Infantry/Tank only) - approximated
+    current_count = 0
+    for u in us_in_target:
+        # Assume everything except HQ counts
+        if not (u.get('is_hq', False) or 'HQ' in u.get('name', '')):
+             current_count += 1
+                 
+    # Max is 6.
+    # If target area is 1, 2, 30 -> No limit.
+    limit = 6
+    if data.toArea in ["Area 1", "Area 2", "Area 30"]:
+        limit = 999
+        
+    if current_count >= limit:
+        return {
+            "valid": False,
+            "cost": result['cost'],
+            "message": f"Stacking Limit Exceeded ({current_count} + 1 > {limit})",
+            "mandatory_attack": result['mandatory_attack']
+        }
+        
+    return result
+
+

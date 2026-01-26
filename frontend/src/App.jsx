@@ -124,6 +124,61 @@ function App() {
     const [backendStatus, setBackendStatus] = useState('Checking...');
     const [usControl, setUsControl] = useState(3); // Start with 3 areas
 
+    // Resource State
+    const [supplyPoints, setSupplyPoints] = useState(12); // Initial Supply
+    const [supportUnits, setSupportUnits] = useState({
+        artillery: { name: 'Artillery', type: 'artillery', available: 0, used: 0, max: 11, cost: 1 },
+        engineer: { name: 'Engineer', type: 'engineer', available: 0, used: 0, max: 3, cost: 2 },
+        air: { name: 'Air Support', type: 'air', available: 0, used: 0, max: 2, cost: 0 } // Cost rule varies
+    });
+
+    // Resource Handlers
+    const handleAdjustSupply = (amount) => {
+        setSupplyPoints(prev => Math.max(0, prev + amount));
+    };
+
+    const handleBuySupport = (type) => {
+        const unit = supportUnits[type];
+        if (!unit) return;
+        // Check supply and max limit (Total = available + used)
+        // Wait, "Max" refers to physical counters. So (available + used) < max
+        if (supplyPoints >= unit.cost && (unit.available + unit.used) < unit.max) {
+            setSupplyPoints(prev => prev - unit.cost);
+            setSupportUnits(prev => ({
+                ...prev,
+                [type]: { ...prev[type], available: prev[type].available + 1 }
+            }));
+        }
+    };
+
+    const handleUseSupport = (type) => {
+        const unit = supportUnits[type];
+        if (unit.available > 0) {
+            setSupportUnits(prev => ({
+                ...prev,
+                [type]: {
+                    ...prev[type],
+                    available: prev[type].available - 1,
+                    used: prev[type].used + 1
+                }
+            }));
+        }
+    };
+
+    const handleReturnSupport = (type) => { // Undo Use
+        const unit = supportUnits[type];
+        if (unit.used > 0) {
+            setSupportUnits(prev => ({
+                ...prev,
+                [type]: {
+                    ...prev[type],
+                    available: prev[type].available + 1,
+                    used: prev[type].used - 1
+                }
+            }));
+        }
+    };
+
     useEffect(() => {
         // Start with empty board (user must click Start Game)
         setUnits([]);
@@ -273,7 +328,17 @@ function App() {
 
     const handleEndPhase = () => {
         setUnits(units.map(u => ({ ...u, status: 'fresh' })));
-        console.log("End Phase: All units recovered to Fresh status.");
+
+        // Reset Used Support Units (return to supply pool)
+        setSupportUnits(prev => {
+            const next = {};
+            Object.keys(prev).forEach(key => {
+                next[key] = { ...prev[key], used: 0 };
+            });
+            return next;
+        });
+
+        console.log("End Phase: Units refreshed, Used Support Cleared.");
     };
 
     // Helper to calculate centroid of a polygon
@@ -492,7 +557,7 @@ function App() {
     });
 
     return (
-        <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', background: '#222' }}>
+        <div onContextMenu={(e) => e.preventDefault()} style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', background: '#222' }}>
 
             {/* LEFT PANEL: Controls & Status (20%) */}
             <div style={{
@@ -691,20 +756,33 @@ function App() {
             }}>
                 <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Resources</h3>
 
-                {/* Placeholders for Future Implementation */}
                 <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
+
+                    {/* Turn (Static for now) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
                         <div style={{ fontSize: '0.8rem', color: '#aaa' }}>Turn</div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>1</div>
                     </div>
-                    <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
+
+                    {/* Supply (Interactive) */}
+                    <div style={{ background: '#333', padding: '10px', borderRadius: '4px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                         <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Supply</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4caf50' }}>12</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4caf50' }}>{supplyPoints}</div>
+                            <div style={{ display: 'flex', gap: '2px' }}>
+                                <button onClick={() => handleAdjustSupply(1)} style={{ padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}>+</button>
+                                <button onClick={() => handleAdjustSupply(-1)} style={{ padding: '2px 6px', fontSize: '0.8rem', cursor: 'pointer' }}>-</button>
+                            </div>
+                        </div>
                     </div>
+
+                    {/* Morale (Static) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
                         <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Morale</div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2196f3' }}>19 (Strong)</div>
                     </div>
+
+                    {/* Control (Static) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
                         <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Control</div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControl} (Goal: 34)</div>
@@ -712,8 +790,56 @@ function App() {
                 </div>
 
                 <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Support Units</h3>
-                <div style={{ background: '#2a2a2a', padding: '20px', borderRadius: '4px', textAlign: 'center', marginBottom: '20px', border: '1px dashed #555' }}>
-                    <div style={{ color: '#777', fontStyle: 'italic' }}>Support Unit Pool<br />(Artillery, Engineer, Air)</div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                    {Object.values(supportUnits).map(unit => (
+                        <div key={unit.type} style={{ background: '#2a2a2a', padding: '10px', borderRadius: '4px', border: '1px solid #555' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                                <span style={{ fontWeight: 'bold', color: '#ddd' }}>{unit.name}</span>
+                                <span style={{ fontSize: '0.8rem', color: '#aaa' }}>Cost: {unit.cost}</span>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
+                                <div>Avail: <span style={{ color: '#fff' }}>{unit.available}</span> <span style={{ color: '#666' }}>/ {unit.max}</span></div>
+                                <div>Used: <span style={{ color: '#fa8' }}>{unit.used}</span></div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                                <button
+                                    onClick={() => handleBuySupport(unit.type)}
+                                    disabled={supplyPoints < unit.cost || (unit.available + unit.used) >= unit.max}
+                                    style={{
+                                        flex: 1,
+                                        padding: '5px',
+                                        cursor: 'pointer',
+                                        background: (supplyPoints >= unit.cost && (unit.available + unit.used) < unit.max) ? '#2e7d32' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '3px',
+                                        opacity: (supplyPoints >= unit.cost && (unit.available + unit.used) < unit.max) ? 1 : 0.5
+                                    }}
+                                >
+                                    Buy
+                                </button>
+                                <button
+                                    onClick={() => handleUseSupport(unit.type)}
+                                    disabled={unit.available <= 0}
+                                    style={{
+                                        flex: 1,
+                                        padding: '5px',
+                                        cursor: 'pointer',
+                                        background: unit.available > 0 ? '#d84315' : '#555',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '3px',
+                                        opacity: unit.available > 0 ? 1 : 0.5
+                                    }}
+                                >
+                                    Use
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
                 <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Out of Action</h3>

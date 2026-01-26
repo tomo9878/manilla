@@ -127,6 +127,7 @@ function App() {
     const [hoveredStack, setHoveredStack] = useState(null); // { units: [], pointer: {x, y} }
     const [backendStatus, setBackendStatus] = useState('Checking...');
     const [usControlledAreas, setUsControlledAreas] = useState(['Area 1', 'Area 2', 'Area 30']); // Track actual area names
+    const [validRecoveryAreas, setValidRecoveryAreas] = useState([]); // Areas to highlight for recovery
     // Context Menu State
     const [contextMenu, setContextMenu] = useState(null); // { x, y, unitId }
 
@@ -162,13 +163,39 @@ function App() {
         const unit = units.find(u => u.id === unitId);
         if (!unit) return;
 
+        // Japanese Units -> Eliminate
         if (unit.faction === 'JP') {
-            // Permanently remove JP units (Eliminated)
             setUnits(prev => prev.filter(u => u.id !== unitId));
+            setContextMenu(null);
+            return;
+        }
+
+        // Leader Casualty Check (US)
+        // Heuristic: Check for specific Commander names or 'HQ'
+        const isLeader = /HQ|Gen|Leader|Beightler|Chase|Haugen|Griswold/i.test(unit.name) || /HQ/i.test(unit.id);
+
+        if (isLeader) {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            let msg = `Leader Casualty Check (${unit.name}): Rolled ${roll}\n\n`;
+
+            if (roll <= 2) {
+                msg += "Result: KIA (1-2). Unit eliminated.";
+                alert(msg);
+                setUnits(prev => prev.filter(u => u.id !== unitId));
+            } else if (roll <= 4) {
+                msg += "Result: Wounded (3-4). Evacuated (Returns next turn).";
+                alert(msg);
+                setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'wounded' } : u));
+            } else {
+                msg += "Result: Superficial (5-6). Immediate recovery!";
+                alert(msg);
+                // No status change
+            }
         } else {
-            // Send US units to Out of Action
+            // Normal US Unit -> OOA
             setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'out_of_action' } : u));
         }
+
         setContextMenu(null);
     };
 
@@ -426,6 +453,64 @@ function App() {
         console.log("End Phase: Units refreshed, Used Support Cleared.");
     };
 
+    // Helper to get division prefix
+    const getDivision = (unit) => {
+        if (!unit) return null;
+        if (unit.name.includes('11-')) return '11-';
+        if (unit.name.includes('37-')) return '37-';
+        if (unit.name.includes('1-')) return '1-';
+        if (unit.name.includes('XIV')) return 'XIV';
+        return null;
+    };
+
+    // Ray-casting algorithm
+    const isPointInPolygon = (x, y, poly) => {
+        let inside = false;
+        for (let i = 0, j = poly.length - 2; i < poly.length; i += 2) {
+            let xi = poly[i], yi = poly[i + 1];
+            let xj = poly[j], yj = poly[j + 1];
+            let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+            j = i;
+        }
+        return inside;
+    };
+
+    const handleOOAHover = (unit, isHovering) => {
+        if (!isHovering) {
+            setValidRecoveryAreas([]);
+            return;
+        }
+
+        const division = getDivision(unit);
+        const validSet = new Set();
+
+        // Rule B: Initial Areas - Only the specific start area of this unit
+        // Must be US Controlled to be safe for deployment
+        if (unit.startArea && usControlledAreas.includes(unit.startArea)) {
+            validSet.add(unit.startArea);
+        }
+
+        // Rule A: Same Division in US Controlled Area
+        if (division) {
+            const divisionUnits = units.filter(u =>
+                !['out_of_action', 'eliminated', 'wounded'].includes(u.status) &&
+                getDivision(u) === division
+            );
+
+            usControlledAreas.forEach(areaName => {
+                const area = mapData.find(a => a.name === areaName);
+                if (!area) return;
+
+                const hasFriend = divisionUnits.some(u => isPointInPolygon(u.x, u.y, area.points));
+                if (hasFriend) {
+                    validSet.add(areaName);
+                }
+            });
+        }
+        setValidRecoveryAreas(Array.from(validSet));
+    };
+
     // Helper to calculate centroid of a polygon
     const getCentroid = (points) => {
         let x = 0, y = 0, n = points.length / 2;
@@ -596,7 +681,8 @@ function App() {
 
     // Calculate stack indices for rendering
     // Sort units by Y then X for consistent rendering
-    const sortedUnits = [...units].sort((a, b) => a.y - b.y || a.x - b.x);
+    const mapUnits = units.filter(u => !['out_of_action', 'eliminated', 'wounded'].includes(u.status));
+    const sortedUnits = [...mapUnits].sort((a, b) => a.y - b.y || a.x - b.x);
 
     // Calculate stack index (0, 1, 2...) for offset
     const stackMap = {};
@@ -793,8 +879,17 @@ function App() {
                             <Line
                                 key={i}
                                 points={area.points}
-                                fill={usControlledAreas.includes(area.name) ? 'rgba(0, 100, 255, 0.15)' : (selectedArea?.name === area.name ? 'rgba(255, 0, 0, 0.4)' : (hoveredArea === area.name ? 'rgba(255, 255, 255, 0.2)' : 'transparent'))}
-                                stroke={usControlledAreas.includes(area.name) ? 'rgba(0, 150, 255, 0.5)' : (selectedArea?.name === area.name ? 'red' : 'rgba(255,255,0,0.3)')}
+                                fill={
+                                    validRecoveryAreas.includes(area.name) ? 'rgba(255, 215, 0, 0.4)' :
+                                        (usControlledAreas.includes(area.name) ? 'rgba(0, 100, 255, 0.15)' :
+                                            (selectedArea?.name === area.name ? 'rgba(255, 0, 0, 0.4)' :
+                                                (hoveredArea === area.name ? 'rgba(255, 255, 255, 0.2)' : 'transparent')))
+                                }
+                                stroke={
+                                    validRecoveryAreas.includes(area.name) ? 'rgba(255, 215, 0, 0.8)' :
+                                        (usControlledAreas.includes(area.name) ? 'rgba(0, 150, 255, 0.5)' :
+                                            (selectedArea?.name === area.name ? 'red' : 'rgba(255,255,0,0.3)'))
+                                }
                                 strokeWidth={3}
                                 closed
                                 onMouseEnter={() => {
@@ -945,6 +1040,8 @@ function App() {
                                         e.preventDefault();
                                         setContextMenu({ x: e.clientX, y: e.clientY, unitId: u.id, type: 'recover' });
                                     }}
+                                    onMouseEnter={() => handleOOAHover(u, true)}
+                                    onMouseLeave={() => handleOOAHover(u, false)}
                                     title={`${u.name}\nRight-click to Recover`}
                                 />
                             ))}

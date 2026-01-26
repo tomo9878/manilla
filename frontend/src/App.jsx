@@ -11,30 +11,46 @@ Konva.pixelRatio = window.devicePixelRatio || 1;
 
 const UNIT_SIZE = 100;
 
-const UnitCounter = ({ unit, x, y, onDragEnd, onToggleStatus }) => {
+const UnitCounter = ({ unit, x, y, indexInStack, onDragStart, onDragEnd, onClick, onDblClick, onHover }) => {
     // Load both images to prevent flickering when flipping
     const [frontImg] = useImage(`/images/${unit.frontImage}`);
     const [backImg] = useImage(unit.backImage ? `/images/${unit.backImage}` : null);
 
     // Determine current image based on status
-    // For US: fresh=front, spent=back(or dim front)
-    // For JP: fresh(hidden)=front(chit), spent(revealed)=back(unit) - abusing 'spent' for 'revealed' temporarily for demo
     const isSpent = unit.status === 'spent';
 
     // Use back image if spent and available, otherwise fallback to front
     const currentImage = (isSpent && backImg) ? backImg : frontImg;
 
+    // Stack offset logic
+    const offset = (indexInStack || 0) * 5;
+
     return (
         <Group
-            x={x}
-            y={y}
-            draggable={!isSpent} // Note: JP units might need to be dragable even if revealed? For now standard rule.
+            x={x + offset}
+            y={y + offset}
+            draggable={!isSpent}
+            onDragStart={(e) => {
+                onDragStart && onDragStart(unit.id);
+            }}
             onDragEnd={(e) => {
-                onDragEnd(unit.id, e.target.x(), e.target.y());
+                onDragEnd(unit.id, e.target.x() - offset, e.target.y() - offset);
+            }}
+            onClick={(e) => {
+                e.cancelBubble = true;
+                onClick && onClick(unit.id);
             }}
             onDblClick={(e) => {
-                e.cancelBubble = true; // Prevent stage events
-                onToggleStatus(unit.id);
+                e.cancelBubble = true;
+                onDblClick && onDblClick(unit.id);
+            }}
+            onMouseEnter={(e) => {
+                const stage = e.target.getStage();
+                const pointer = stage.getPointerPosition();
+                onHover && onHover(unit, true, pointer);
+            }}
+            onMouseLeave={() => {
+                onHover && onHover(unit, false);
             }}
         >
             {/* Shadow/Border for visibility */}
@@ -173,13 +189,83 @@ function App() {
         console.log(`Moved unit ${id} to ${newX}, ${newY}`);
     };
 
-    const handleUnitToggleStatus = (id) => {
+    const handleUnitDblClick = (id) => {
         setUnits(units.map(u => {
             if (u.id === id) {
                 return { ...u, status: u.status === 'fresh' ? 'spent' : 'fresh' };
             }
             return u;
         }));
+    };
+
+    const handleUnitClick = (id) => {
+        // Rotate stack logic
+        const clickedUnit = units.find(u => u.id === id);
+        if (!clickedUnit) return;
+
+        console.log(`Clicked unit: ${id}`, clickedUnit);
+
+        // Find units in the same stack (very close proximity)
+        const stackThreshold = 60; // Increased threshold
+        const stackUnits = units.filter(u =>
+            Math.abs(u.x - clickedUnit.x) < stackThreshold &&
+            Math.abs(u.y - clickedUnit.y) < stackThreshold
+        );
+
+        console.log(`Found ${stackUnits.length} units in stack.`);
+
+        if (stackUnits.length <= 1) return; // No stack to rotate
+
+        // Sort stack units by visual order (Y then X ascending)
+        // Smaller X/Y = "Back", Larger X/Y = "Front"
+        const sortedStackUnits = [...stackUnits].sort((a, b) => (a.y - b.y) || (a.x - b.x));
+
+        // Find current index of clicked unit in the sorted stack
+        const currentIndex = sortedStackUnits.findIndex(u => u.id === id);
+        console.log(`Current index in stack: ${currentIndex} / ${sortedStackUnits.length - 1}`);
+
+        // We want to move the Currently Clicked Unit (presumably the top/last one visually)
+        // to the BOTTOM (index 0). And shift everyone else up.
+        // Actually, let's just cycle the positions:
+        // Position[i] takes the unit from sortedStackUnits[(i + 1) % N]
+        // This shifts units "Left/Up" in the array (Towards 0).
+        // The unit at 0 moves to N-1 (Top). Wait, that brings back to front.
+
+        // To "send to back": The unit at Top (N-1) should go to Bottom (0).
+        // Unit at 0 should go to 1.
+
+        // Let's capture the POSITIONS.
+        const positions = sortedStackUnits.map(u => ({ x: u.x, y: u.y }));
+
+        // Map new units state
+        const newUnits = units.map(u => {
+            // Is this unit in the stack?
+            const stackIdx = sortedStackUnits.findIndex(s => s.id === u.id);
+            if (stackIdx === -1) return u;
+
+            // It is in the stack. Logic:
+            // If stackIdx is Top (N-1), it moves to Pos 0.
+            // If stackIdx is k, it moves to Pos k+1.
+
+            // This assumes the clicked unit IS the top unit.
+            // If the user clicks a unit in the middle (because top is transparent?), this still cycles.
+
+            let newPosIdx;
+            if (stackIdx === sortedStackUnits.length - 1) {
+                newPosIdx = 0;
+            } else {
+                newPosIdx = stackIdx + 1;
+            }
+
+            return {
+                ...u,
+                x: positions[newPosIdx].x,
+                y: positions[newPosIdx].y
+            };
+        });
+
+        console.log("Rotating stack...");
+        setUnits(newUnits);
     };
 
     const handleEndPhase = () => {
@@ -333,6 +419,66 @@ function App() {
         console.log("Game Started: Units distributed.");
     };
 
+    const handleUnitDragStart = (id) => {
+        setHoveredUnitData(null); // Clear tooltip
+        // Optional: Bring to front logic (handled by Konva usually)
+    };
+
+    const handleUnitHover = (unit, isHovering, pointer) => {
+        if (isHovering) {
+            setHoveredUnitData({ unit, pointer });
+        } else {
+            setHoveredUnitData(null);
+        }
+    };
+
+    // Calculate stack indices for rendering
+    // Sort units by Y then X for consistent rendering
+    const sortedUnits = [...units].sort((a, b) => a.y - b.y || a.x - b.x);
+
+    // Calculate stack index (0, 1, 2...) for offset
+    const stackMap = {};
+    const STACK_THRESHOLD = 40;
+
+    // Simple greedy clustering for stack count
+    // NOTE: This runs every render, might be slow for 1000 units but fine for 50.
+    // For offset, we just need to know "how many *other* units are at roughly this spot".
+
+    // Reset counters
+    const tempCounters = {};
+    sortedUnits.forEach(u => {
+        // Find a representative key for the stack (e.g. rounded coordinates)
+        // Or simply iterate and check proximity?
+        // Let's use simple proximity to "previous" units in sorted list
+        // Since they are sorted by position, stacked units are adjacent in list!
+        // No, because id-based sort is robust, position sort is fluctuating? 
+        // Actually, we specifically want to offset based on "how many units are under me".
+
+        let stackIndex = 0;
+        // Check only against previously processed units?
+        // No, we need to know the *total* count to maybe center it?
+        // But for simply cascading (0, 1, 2), we can just count how many "before me" are close.
+
+        // This is O(N^2) in worst case, but N=50 is tiny.
+        const nearby = sortedUnits.filter(other =>
+            other.id !== u.id &&
+            Math.abs(other.x - u.x) < STACK_THRESHOLD &&
+            Math.abs(other.y - u.y) < STACK_THRESHOLD
+        );
+
+        // However, we want a stable index.
+        // If we simply count "how many nearby units have logic index < my logic index"?
+        // Let's use the index in the `sortedUnits` array as the tiebreaker.
+
+        const myRank = nearby.filter(other => {
+            // Compare identifying correlation (e.g. ID string or just original index)
+            // Let's use ID string comparison for stability
+            return other.id < u.id;
+        }).length;
+
+        stackMap[u.id] = myRank;
+    });
+
     return (
         <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#222' }}>
             {/* UI Overlay */}
@@ -452,14 +598,19 @@ function App() {
                     ))}
 
                     {/* Units */}
-                    {units.map((unit) => (
+                    {/* Units - Render loop */}
+                    {sortedUnits.map((unit) => (
                         <UnitCounter
                             key={unit.id}
                             unit={unit}
                             x={unit.x}
                             y={unit.y}
+                            indexInStack={stackMap[unit.id] || 0}
+                            onDragStart={handleUnitDragStart}
                             onDragEnd={handleUnitDragEnd}
-                            onToggleStatus={handleUnitToggleStatus}
+                            onClick={handleUnitClick}
+                            onDblClick={handleUnitDblClick}
+                            onHover={handleUnitHover}
                         />
                     ))}
                 </Layer>

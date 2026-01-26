@@ -107,16 +107,8 @@ function App() {
     const [backendStatus, setBackendStatus] = useState('Checking...');
 
     useEffect(() => {
-        // Initialize units with default positions (e.g., stacked in Area 4 for testing)
-        // Area 4 is roughly at 2800, 500 based on map_data.json
-        const initialUSUnits = unitsData.map((u, index) => ({
-            ...u,
-            x: 2800 + (index % 5) * 110, // Wider grid for larger units
-            y: 500 + Math.floor(index / 5) * 110,
-            status: 'fresh' // Default status
-        }));
-        // Japanese units are hidden by default until Start Game is clicked.
-        setUnits(initialUSUnits);
+        // Start with empty board (user must click Start Game)
+        setUnits([]);
     }, []);
 
     // Restore effects and handlers
@@ -305,18 +297,17 @@ function App() {
 
         // Setup JP Units
         // Iterate through all map areas
-        const usStartAreas = ["Area 1", "Area 2", "Area 30", "Reinforcements"];
+        // Setup JP Units
+        // Iterate through all map areas
+        const excludeKeywords = ["Turn", "Record", "Morale", "Supply", "Reinforcements"];
+        const excludeExactAreas = ["Area 1", "Area 2", "Area 30"];
 
         mapData.forEach(area => {
             // Check if this area needs a unit
-            // Rule check: All areas? Or specific ones?
-            // User said: "map on corresponding terrain icon having areas"
-            // For now, if the area has a terrain type matching our pools, we try to place one.
-
-            // EXCLUDE US START AREAS to prevent immediate melee
-            if (usStartAreas.includes(area.name)) {
-                return;
-            }
+            // 1. Keyword check (Partial match logic for tracks etc)
+            if (excludeKeywords.some(k => area.name.includes(k))) return;
+            // 2. Exact area check (Prevent including Area 10, 20 etc by accident)
+            if (excludeExactAreas.includes(area.name)) return;
 
             const terrain = area.terrain; // "Clear", "Urban", "Fort", etc.
 

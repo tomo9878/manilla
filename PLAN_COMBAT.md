@@ -1,56 +1,57 @@
-## Phase 4: Combat Phase Implementation Plan
+## フェーズ4: 戦闘フェーズ実装計画
 
-The Combat Phase is the core of "Manila: Savage Streets 1945". It involves an impulse-based system where players alternate activating areas to move and fight.
+戦闘フェーズは『Manila: Savage Streets 1945』の中核となる部分です。プレイヤーが交互にエリアを活性化し、移動や戦闘を行う「インパルス方式」で進行します。
 
-### 1. Impulse System & State Management
-- **State Check**: `currentImpulse` (US or JP).
-- **Activation**:
-  - Player selects an Area to "Activate".
-  - Area must be "Fresh" (not Spent).
-  - Activating an area marks all units in it as "Activated".
-- **Actions**:
-  - **Move**: Units in activated area can move to adjacent areas.
-    - Movement costs (1 MP normally, +1 for crossing streams/ridges).
-    - Entering an enemy-occupied area (Close Combat) costs all MP.
-  - **Fire**: Units can fire at adjacent areas.
-    - Fire Value = Sum of Combat Factors.
-    - Shifts: Terrain, Combined Arms, Prep Fire.
-  - **Pass**: If a player passes, impulse goes to opponent. If both pass consecutively, phase ends.
-- **Spent Status**: After activation, units/area are marked "Spent".
+### 1. インパルスシステムと状態管理
+- **手番ステータス**: `currentImpulse` (US または JP)。
+- **活性化 (Activation)**:
+  - プレイヤーは「活性化」するエリアを1つ選択します。
+  - エリアは「Fresh（未行動）」状態でなければなりません。
+  - 活性化すると、そのエリア内の全ユニットが行動可能状態になります。
+- **アクション**:
+  - **移動 (Move)**: 活性化したエリアのユニットは隣接するエリアへ移動できます。
+    - 移動コスト（通常 1 MP、小川/尾根越えは +1）。
+    - 敵がいるエリアへの進入（近接着上）は全移動力を消費します。
+    - 浸透移動（Infiltration）ルールの考慮が必要。
+  - **射撃 (Fire)**: 隣接するエリアの敵ユニットを射撃できます。
+    - 射撃力 = スタックの戦闘力の合計。
+    - コラムシフト修正: 地形効果、諸兵科連合、準備射撃（Prep Fire）など。
+  - **パス (Pass)**: プレイヤーがパスを選択すると、手番が相手に移ります。双方が連続してパスを行った場合、フェーズが終了します。
+- **行動済み (Spent)**: アクション完了後、そのエリアのユニットは「Spent（行動済み）」状態になります。
 
-### 2. Backend Logic (game_logic.py)
-- `process_activation(area_id)`: Mark area as active.
+### 2. バックエンドロジック (game_logic.py)
+- `process_activation(area_id)`: 指定エリアを活性化状態にする。
 - `process_movement(unit_id, from_area, to_area)`:
-  - Validate adjacency.
-  - Validate MP cost.
-  - Handle "Infiltration" (US moving into Japanese occupied area).
+  - 隣接チェック。
+  - 移動コスト計算。
+  - 浸透移動チェック。
 - `process_combat(attacker_ids, target_area_id)`:
-  - Calculate Attack Value (AV).
-  - Calculate Defense Value (DV) (Terrain dependent).
-  - Apply Column Shifts (Combined Arms, etc.).
-  - Roll 2d6 (Attacker) vs 1d6 (Defender, derived from CRT or simplified mechanics depending on rules).
-  - Apply results (Elimination, Retreat, Step Loss).
+  - 攻撃力 (AV) の計算。
+  - 防御力 (DV) の計算（地形依存）。
+  - コラムシフトの適用。
+  - 2d6 のダイスロール vs 1d6（防御側/CRTに基づく）。
+  - 結果の適用（除去、後退、ステップロス）。
 
-### 3. Frontend Interactions
-- **Area Selection**: Highlight valid areas for activation.
-- **Unit Drag & Drop**: For movement.
-- **Target Selection**: Right-click enemy area to "Fire".
-- **Combat Resolution Window**: Pop-up showing the calculation and roll button.
+### 3. フロントエンド実装 (UI/UX)
+- **エリア選択**: 活性化可能なエリアをハイライト表示。
+- **ユニット移動 (D&D)**: ドラッグ＆ドロップによる移動操作。
+- **ターゲット選択**: 敵エリアを右クリックして「射撃」を選択。
+- **戦闘解決ウィンドウ**: 計算結果とダイスロールボタンを表示するポップアップ。
 
-### 4. Special Rules
-- **Bloody Streets (Rule 8.0)**:
-  - **Trigger**: Start of Combat Phase (Action Round 0).
-  - **Condition**: Area is **Urban** or **Fort** AND contains **both US and JP units**.
-  - **Process**: Roll 1d6 per valid area.
-    - **1-2**: No Effect.
-    - **3-4 (Bloody Streets)**: US Player selects 1 unit -> **OOA**.
-    - **5-6 (Heavy Losses)**: US Player selects 1 unit -> **OOA** AND **Morale -1**.
-  - **Note**: Japan takes no losses from this check.
-- **Combined Arms**:
-  - Tank + Infantry stack benefit.
+### 4. 特殊ルール
+- **市街戦 (Bloody Streets - Rule 8.0)**:
+  - **発生**: 戦闘フェーズ開始時（アクションラウンド 0）。
+  - **条件**: エリアが **Urban（市街地）** または **Fort（要塞）** で、かつ **日米両軍が存在** する場合。
+  - **手順**: 各対象エリアで 1d6 を振る。
+    - **1-2**: 効果なし。
+    - **3-4 (Bloody Streets)**: 米軍プレイヤーがユニットを1つ選んで **OOA（戦線離脱）** にする。
+    - **5-6 (Heavy Losses)**: 米軍プレイヤーがユニットを1つ選んで **OOA** にし、さらに **士気 -1**。
+  - **備考**: 日本軍はこのチェックで損害を受けない。
+- **諸兵科連合 (Combined Arms)**:
+  - 戦車と歩兵がスタックしている場合のボーナス。
 
-### Steps
-1. **Bloody Streets Implementation**: Automatic check at start of phase.
-2. **Impulse Loop Infrastructure**: Backend endpoint to handle "Pass" and "Activate".
-3. **Movement Implementation**: Drag & drop with validation.
-4. **Combat Engine**: The 2d6 CRT logic.
+### 作業手順 (Steps)
+1. **市街戦 (Bloody Streets) 実装**: フェーズ開始時の自動チェック。（完了）
+2. **インパルス制御基盤**: 「パス」および「活性化」を処理するバックエンドAPI。
+3. **移動機能の実装**: バリデーション付きのドラッグ＆ドロップ。
+4. **戦闘エンジンの実装**: 2d6 CRT ロジックの構築。

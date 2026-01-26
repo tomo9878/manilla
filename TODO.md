@@ -99,3 +99,15 @@
 ## フェーズ 4: ルール詳細実装とエフェクト
 - [ ] **Area Control Logic**: Implement logic to determine which side controls each area. (Required for victory conditions and unit recovery costs).
 - [ ] **Unit Recovery Highlight**: When recovering a unit from OOA, highlight valid placement options (areas with same-division units in US control, or initial areas) with a pulsing visual effect.
+
+### 戦闘・運用ルール詳細
+- [ ] **親部隊の制約 (Parent Formation)**: 攻撃に参加する師団が複数ある場合、2つ目以降の師団ごとに攻撃値(AV) -1。
+- [ ] **瓦礫の山 (Rubble)**:
+    - [ ] Urban/Fortエリア攻撃時、工兵(Engineer)なしでは諸兵科連合ボーナス(Combined Arms)無効。
+    - [ ] Fortエリアではオーバーラン発生不可（勝利してもSpentになる）。
+- [ ] **航空支援 (Air Support)**:
+    - [ ] 解禁条件: 米軍士気が一度でも9以下(Shaken)になったら購入可能フラグをONにする（永続）。
+    - [ ] 効果: 日本軍防御値(DV)を -1d6 する（最低0）。
+- [ ] **砲兵支援の制限 (Artillery)**:
+    - [ ] Turn 1-3: 1戦闘につき砲兵は1枚まで。
+    - [ ] Turn 4+: 制限解除（ルール通り投入可能）。

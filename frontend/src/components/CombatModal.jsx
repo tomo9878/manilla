@@ -8,12 +8,14 @@ import './CombatModal.css';
  * Props:
  * - onClose: function
  * - onApply: function(resultData) -> void
+ * - onReveal: function(unitId) -> void
  * - attackerUnits: Array
- * - defenderUnit: Object (The actual unit, hidden initially)
+ * - defenderUnit: Object 
  * - terrain: string
  * - morale: number
+ * - currentTurn: number (NEW)
  */
-const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terrain = 'Clear', morale = 19 }) => {
+const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerUnits = [], defenderUnit, terrain = 'Clear', morale = 19, currentTurn = 1 }) => {
     // Steps: 'CONTACT' -> 'STRATEGY' -> 'SETUP' -> 'RESOLUTION' -> 'RESULT'
     const [step, setStep] = useState('CONTACT');
 
@@ -21,122 +23,99 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
     const [selectedLeadId, setSelectedLeadId] = useState(null);
     const [activeAttackers, setActiveAttackers] = useState([]);
     const [isRevealed, setIsRevealed] = useState(false);
+    const [strategyCasualtyIds, setStrategyCasualtyIds] = useState([]); // Track strategy kills
 
     // Modifiers
     const [support, setSupport] = useState({ artillery: 0, engineer: 0, air_support: false });
 
     // Calculation & Result
     const [calculatedStats, setCalculatedStats] = useState({ av: 0, dv: 0, logs: [] });
-    const [combatResult, setCombatResult] = useState(null);
-    const [isRolling, setIsRolling] = useState(false);
-    const [combatLogs, setCombatLogs] = useState([]);
+    // ... (rest of state)
 
-    // Initialize
-    useEffect(() => {
-        // Deep copy attackers to manage local state (removal by events)
-        setActiveAttackers(attackerUnits.map(u => ({ ...u })));
+    // ... (useEffect omitted)
 
-        // Auto-select lead
-        if (attackerUnits.length > 0) {
-            const propsLead = attackerUnits.find(u => u.is_lead);
-            setSelectedLeadId(propsLead ? propsLead.id : attackerUnits[0].id);
-        }
-    }, [attackerUnits]);
+    // Log helper ...
 
-    // Recalculate stats whenever inputs change (Only in SETUP phase really, but keep reactive)
-    useEffect(() => {
-        if (step === 'SETUP' || step === 'RESOLUTION') {
-            recalculate();
-        }
-    }, [support, activeAttackers, selectedLeadId, isRevealed, step]);
-
-    const addLog = (msg, type = 'info') => {
-        setCombatLogs(prev => [...prev, { msg, type }]);
-    };
-
-    // --- Actions ---
-
-    const handleReveal = () => {
-        if (!selectedLeadId) {
-            alert("Please select a Lead Unit first.");
-            return;
-        }
-
-        setIsRevealed(true);
-        setStep('STRATEGY');
-        addLog("Enemy Revealed!", 'warning');
-
-        // Process Strategy
-        processDefenseStrategy();
-    };
+    // ...
 
     const processDefenseStrategy = () => {
         if (!defenderUnit) return;
 
-        const strategy = defenderUnit.unitClass; // Sniper, Ambush, etc.
+        const strategy = defenderUnit.unitClass;
         const leadUnit = activeAttackers.find(u => u.id === selectedLeadId);
         let newAttackers = [...activeAttackers];
         let strategyLog = `Strategy: ${strategy}`;
+        let removedId = null;
 
         if (strategy === 'Ambush') {
             if (leadUnit) {
                 strategyLog += ` -> Ambush! Lead Unit ${leadUnit.name} Eliminated (OOA).`;
-                // Remove lead
-                newAttackers = newAttackers.filter(u => u.id !== leadUnit.id);
-                // Reset lead if removed
-                setSelectedLeadId(newAttackers.length > 0 ? newAttackers[0].id : null);
+                removedId = leadUnit.id;
             }
         } else if (strategy === 'Sniper') {
-            // Remove Leader
-            const leaders = newAttackers.filter(u => u.type === 'Leader');
+            const leaders = newAttackers.filter(u => isLeader(u));
             if (leaders.length > 0) {
                 const target = leaders[0];
                 strategyLog += ` -> Sniper! Leader ${target.name} Eliminated (OOA).`;
-                newAttackers = newAttackers.filter(u => u.id !== target.id);
-                if (target.id === selectedLeadId) {
-                    setSelectedLeadId(newAttackers.length > 0 ? newAttackers[0].id : null);
-                }
+                removedId = target.id;
             } else {
                 strategyLog += " -> Sniper (No effect, no leader).";
             }
         } else if (strategy === 'Barrage') {
-            // Simplified: Remove 1 random unit or ask user?
-            // User request impl: "Barrage: US must choose 1 unit OOA or Retreat".
-            // Implementation: Simple First Unit OOA for now to keep flow automated.
             if (newAttackers.length > 0) {
-                const target = newAttackers[newAttackers.length - 1]; // Remove last added (support?)
+                const target = newAttackers[newAttackers.length - 1]; // Last unit
                 strategyLog += ` -> Barrage! Unit ${target.name} Eliminated (OOA).`;
-                newAttackers = newAttackers.filter(u => u.id !== target.id);
-                if (target.id === selectedLeadId) {
-                    setSelectedLeadId(newAttackers.length > 0 ? newAttackers[0].id : null);
-                }
+                removedId = target.id;
             }
         } else if (strategy === 'Fanatic') {
-            strategyLog += " -> Fanatic! (Will force Stalemate if Success, unless Overrun)";
+            strategyLog += " -> Fanatic! (Success -> Stalemate)";
         } else if (strategy === 'Elite') {
             strategyLog += " -> Elite! (Defends with 3d6 drop low)";
+        }
+
+        if (removedId) {
+            newAttackers = newAttackers.filter(u => u.id !== removedId);
+            setStrategyCasualtyIds(prev => [...prev, removedId]);
+
+            if (onStrategyCasualty) {
+                onStrategyCasualty([removedId]);
+            }
+
+            // If lead removed, reassign lead
+            if (removedId === selectedLeadId) {
+                setSelectedLeadId(newAttackers.length > 0 ? newAttackers[0].id : null);
+            }
         }
 
         setActiveAttackers(newAttackers);
         addLog(strategyLog, 'danger');
 
-        // Check if any attackers left
         if (newAttackers.length === 0) {
             addLog("All attacking units eliminated by Strategy.", 'danger');
-            setStep('RESULT'); // End early
+            setStep('RESULT');
+            // Even if all eliminated, we might need to apply result (resultType Repulse/Stalemate equivalent?)
+            // Technically combat ends immediately.
+            // Result should be treated as Repulse or specialized 'StrategyElimination'.
+            setCombatResult({ resultTypeActual: 'Repulse', logs: ["Combat ended by Strategy Casualty."] });
         } else {
-            setTimeout(() => setStep('SETUP'), 1000); // Auto advance to setup after effect
+            setTimeout(() => setStep('SETUP'), 1500);
         }
     };
 
     const recalculate = async () => {
-        // Call Backend API
+        // Validation: At least one unit must participate (and not just HQ with 0 attack? 
+        // Backend handles "No attacking units" case.
+        // We filter activeAttackers by participatingIds.
+        const participatingUnits = activeAttackers
+            .filter(u => participatingIds.has(u.id))
+            .map(u => ({ ...u, is_lead: u.id === selectedLeadId }));
+
         try {
             const response = await fetch('/api/combat/calculate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    attackerUnits: activeAttackers.map(u => ({ ...u, is_lead: u.id === selectedLeadId })),
+                    attackerUnits: participatingUnits,
                     supportModifiers: support,
                     morale: morale,
                     terrainType: terrain,
@@ -145,7 +124,7 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
                         defense_factor: defenderUnit.strength || 3,
                         is_elite: defenderUnit.unitClass === 'Elite'
                     },
-                    isMandatoryAttack: false, // Need to pass this in props if relevant
+                    isMandatoryAttack: false,
                     eventCiviActive: false
                 })
             });
@@ -153,7 +132,6 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
             setCalculatedStats(data);
         } catch (e) {
             console.error("Calc Error", e);
-            // Fallback mock
             setCalculatedStats({ av: 99, dv: 99, logs: ["API Error"] });
         }
     };
@@ -168,17 +146,6 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     attackValue: calculatedStats.av,
-                    defenseValue: calculatedStats.dv, // This DV includes base + terrain + shaken from calculate? 
-                    // No, process_combat takes BaseDF Separate? 
-                    // Let's check game_logic. process_combat(av, dv, t_mod, s_mod).
-                    // calculate_stats returns 'dv' which is Total DV (Base+Terrain+Shaken).
-                    // So if we pass that as defenseValue, we should set modifiers to 0 in resolve?
-                    // Yes, or game_logic double counts.
-                    // game_logic calculate_combat_stats returns 'dv' = base + terrain + shaken.
-                    // game_logic process_combat takes 'defense_val', 'terrain_mod', 'strategy_mod' and ADDS them.
-                    // So we must be careful.
-                    // Let's pass calculated 'dv' as defenseValue and 0 as mods.
-                    attackValue: calculatedStats.av,
                     defenseValue: calculatedStats.dv,
                     terrainMod: 0,
                     strategyMod: 0,
@@ -190,39 +157,29 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
 
             // Check Fanatic Rule
             if (defenderUnit.unitClass === 'Fanatic' && data.is_success && !data.is_overrun) {
-                // Fanatic cancels Success -> Stalemate
                 data.is_success = false;
                 data.logs.push("Fanatic Defense! Success converted to Stalemate.");
                 data.resultTypeActual = 'Stalemate';
             } else {
                 if (data.is_overrun) data.resultTypeActual = 'Overrun';
                 else if (data.is_success) data.resultTypeActual = 'Success';
-                else data.resultTypeActual = 'Repulse'; // Stalemate condition check in logic? 
-                // Logic says AT < DT is Fail. Repulse? 
-                // User says AT < DT = Repulse. AT = DT = Stalemate.
-                // process_combat diff = AT - DT.
-                // If diff < 0 -> Repulse.
-                // If diff == 0 -> Stalemate.
-                // If diff > 0 -> Success.
-                // My process_combat only returns is_success (diff>0).
-                // I need to interpret diff.
+                else data.resultTypeActual = 'Repulse';
             }
 
-            // Refine Result Type
-            let rType = 'Repulse';
-            if (data.diff === 0) rType = 'Stalemate';
-            if (data.diff > 0) rType = 'Success';
-            if (data.is_overrun) rType = 'Overrun';
-
-            // Fanatic Check Again
-            if (defenderUnit.unitClass === 'Fanatic' && rType === 'Success') {
-                rType = 'Stalemate';
-                data.logs.push("Fanatic: Success -> Stalemate");
+            if (!data.resultTypeActual) {
+                let rType = 'Repulse';
+                if (data.diff === 0) rType = 'Stalemate';
+                if (data.diff > 0) rType = 'Success';
+                if (data.is_overrun) rType = 'Overrun';
+                data.resultTypeActual = rType;
             }
 
-            data.resultTypeActual = rType;
+            if (defenderUnit.unitClass === 'Fanatic' && data.resultTypeActual === 'Success') {
+                data.resultTypeActual = 'Stalemate';
+            }
+
             setCombatResult(data);
-            addLog(`Result: ${rType} (Diff ${data.diff})`, 'result');
+            addLog(`Result: ${data.resultTypeActual} (Diff ${data.diff})`, 'result');
             setStep('RESULT');
 
         } catch (e) {
@@ -236,10 +193,11 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
         if (onApply && combatResult) {
             onApply({
                 resultType: combatResult.resultTypeActual,
-                attackerUnits: activeAttackers.map(u => ({ ...u, is_lead: u.id === selectedLeadId })),
+                attackerUnits: activeAttackers.filter(u => participatingIds.has(u.id)).map(u => ({ ...u, is_lead: u.id === selectedLeadId })),
                 defenderUnit: defenderUnit,
-                targetArea: "Combat Area", // Mock
-                currentMorale: morale
+                targetArea: "Combat Area",
+                currentMorale: morale,
+                strategyCasualtyIds: strategyCasualtyIds
             });
         }
         onClose();
@@ -261,11 +219,43 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
                             {activeAttackers.map(u => (
                                 <div
                                     key={u.id}
-                                    className={`unit-card ${u.id === selectedLeadId ? 'lead' : ''}`}
-                                    onClick={() => step !== 'RESULT' && setSelectedLeadId(u.id)}
-                                    style={{ cursor: step !== 'RESULT' ? 'pointer' : 'default' }}
+                                    className={`unit-card ${u.id === selectedLeadId ? 'lead' : ''} ${!participatingIds.has(u.id) ? 'inactive' : ''}`}
+                                    onClick={() => {
+                                        if (step === 'RESULT') return;
+                                        // Click logic: 
+                                        // 1. If clicking lead, do nothing (Lead must participate).
+                                        // 2. If clicking others, toggle participation.
+                                        // 3. To change lead, use a separate action? Or double click?
+                                        // Spec says: "Who participates". Lead must be one of them.
+                                        // Let's assume clicking makes it Lead if active, or toggles participation?
+                                        // Better UI: Checkbox for participation. Body click for Lead.
+                                        // Let's implement body click -> Set Lead (if active). 
+                                        // Add a small checkbox div for participation.
+                                        if (participatingIds.has(u.id)) setSelectedLeadId(u.id);
+                                    }}
+                                    style={{ cursor: step !== 'RESULT' ? 'pointer' : 'default', opacity: participatingIds.has(u.id) ? 1 : 0.5 }}
                                 >
-                                    <div className="unit-card-icon">{u.type === 'Tank' ? 'Tk' : 'Inf'}</div>
+                                    {/* Checkbox for Participation */}
+                                    <div
+                                        className="participation-toggle"
+                                        style={{ marginRight: 8, cursor: 'pointer' }}
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // prevent Lead select
+                                            if (step === 'RESULT') return;
+                                            toggleParticipation(u.id);
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={participatingIds.has(u.id)}
+                                            disabled={u.id === selectedLeadId} // Lead must participate
+                                            readOnly
+                                        />
+                                    </div>
+
+                                    <div className="unit-card-icon">
+                                        {u.type === 'Tank' ? 'Tk' : isLeader(u) ? 'HQ' : 'Inf'}
+                                    </div>
                                     <div className="unit-info">
                                         <div className="unit-name">{u.name}</div>
                                         <div className="unit-stats">AF: {u.attack_factor} {u.id === selectedLeadId ? '(Lead)' : ''}</div>
@@ -276,10 +266,23 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
 
                         {(step === 'SETUP' || step === 'RESULT') && (
                             <>
-                                <div className="section-title">Support</div>
+                                <div className="section-title">Support (Max {participatingIds.size})</div>
+                                {/* Mixed Formation Warning */}
+                                {calculatedStats.logs.some(l => l.includes("Parent Formation Penalty")) && (
+                                    <div style={{ color: "orange", fontSize: "0.8rem", marginBottom: "4px" }}>
+                                        ⚠️ Mixed Formation Penalty Active (-1)
+                                    </div>
+                                )}
                                 <div className="modifiers-grid">
-                                    <button className={`mod-btn ${support.artillery > 0 ? 'active' : ''}`} onClick={() => setSupport(p => ({ ...p, artillery: (p.artillery + 1) % 3 }))}>Arty x{support.artillery}</button>
-                                    <button className={`mod-btn ${support.engineer > 0 ? 'active' : ''}`} onClick={() => setSupport(p => ({ ...p, engineer: (p.engineer + 1) % 2 }))}>Eng x{support.engineer}</button>
+                                    <button className={`mod-btn ${support.artillery > 0 ? 'active' : ''}`} onClick={() => handleSupportCycle('artillery')}>
+                                        Arty x{support.artillery}
+                                    </button>
+                                    <button className={`mod-btn ${support.engineer > 0 ? 'active' : ''}`} onClick={() => handleSupportCycle('engineer')}>
+                                        Eng x{support.engineer}
+                                    </button>
+                                    <button className={`mod-btn ${support.air_support ? 'active' : ''}`} onClick={() => handleSupportCycle('air_support')}>
+                                        Air {support.air_support ? 'ON' : 'OFF'}
+                                    </button>
                                 </div>
                                 <div className="stats-display">
                                     <div className="stat-label">Total AV</div>
@@ -295,6 +298,9 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
                             <button className="roll-btn" onClick={handleReveal} style={{ fontSize: '0.9rem', width: 120, height: 60, borderRadius: 8 }}>
                                 REVEAL
                             </button>
+                        )}
+                        {step === 'STRATEGY' && (
+                            <div style={{ color: 'yellow' }}>Enemy Strategy...</div>
                         )}
                         {step === 'SETUP' && (
                             <button className="roll-btn" onClick={handleRoll} disabled={isRolling}>
@@ -336,13 +342,7 @@ const CombatModal = ({ onClose, onApply, attackerUnits = [], defenderUnit, terra
 
                         {(step === 'SETUP' || step === 'RESULT') && (
                             <>
-                                <div className="section-title">JP Mods</div>
-                                <div className="modifiers-grid">
-                                    <button
-                                        className={`mod-btn ${support.air_support ? 'active' : ''}`}
-                                        onClick={() => setSupport(p => ({ ...p, air_support: !p.air_support }))}
-                                    >Air Support {support.air_support ? 'ON' : 'OFF'}</button>
-                                </div>
+                                <div className="section-title">JP Stats</div>
                                 <div className="stats-display">
                                     <div className="stat-label">Total DV</div>
                                     <div className="stat-value">{calculatedStats.dv}</div>

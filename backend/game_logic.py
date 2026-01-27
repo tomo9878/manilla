@@ -571,6 +571,31 @@ class GameLogic:
         if event_civi_active and is_mandatory_attack:
             av -= 1
             logs.append("AV Penalty (Civilians & Mandatory): -1")
+
+        # --- Parent Formation Penalty (Rule 11.5) ---
+        # Identify formations based on ID prefixes
+        # 37th Inf: "37_"
+        # 1st Cav: "1C_"
+        # 11th Abn: "11-"
+        formations = set()
+        for u in attacker_units:
+            uid = u.get('id', '')
+            if uid.startswith('37_'):
+                formations.add('37th')
+            elif uid.startswith('1C_'):
+                formations.add('1st')
+            elif uid.startswith('11-'):
+                formations.add('11th')
+            # HQ Whitcomb (37_Whitcomb) -> 37th
+            # HQ Chase (1C_Chase) -> 1st
+            # HQ Haugen (11-Haugen) -> 11th
+            # Logic holds for HQs as well.
+        
+        n_formations = len(formations)
+        if n_formations > 1:
+            penalty = -(n_formations - 1)
+            av += penalty
+            logs.append(f"AV Parent Formation Penalty: {penalty} (Mixed {', '.join(formations)})")
             
         # --- DV Calculation ---
         # Base Defender DF
@@ -730,7 +755,7 @@ class GameLogic:
             "logs": logs
         }
 
-    def apply_combat_result(self, result_type, attacker_units, defender_unit, target_area, current_morale):
+    def apply_combat_result(self, result_type, attacker_units, defender_unit, target_area, current_morale, strategy_casualty_ids=None):
         """
         Applies the combat result to units and game state.
         
@@ -740,6 +765,7 @@ class GameLogic:
             defender_unit (dict): Defending unit dict.
             target_area (str): Name of the area.
             current_morale (int): Current US Morale.
+            strategy_casualty_ids (list): List of unit IDs removed by strategy (Ambush etc) BEFORE combat.
             
         Returns:
             dict: {
@@ -752,40 +778,62 @@ class GameLogic:
         """
         logs = []
         updated_attackers = []
+        # Convert attacker_units to a dict for easier updates by ID
+        units_by_id = {u['id']: u.copy() for u in attacker_units} 
+        
         updated_defender = defender_unit.copy() if defender_unit else None
         new_morale = current_morale
         area_update = {}
+
+        # --- 0. Apply Pre-Combat Strategy Casualties (Ambush, Sniper, Barrage) ---
+        if strategy_casualty_ids:
+            for cid in strategy_casualty_ids:
+                if cid in units_by_id:
+                    u = units_by_id[cid]
+                    u['status'] = 'out_of_action'
+                    u['location'] = 'OOA'
+                    logs.append(f"Strategy Casualty: {u.get('name')} ({u.get('id')}) -> OOA")
         
         # Identify Lead
         # Assuming frontend passes 'is_lead': True in one unit
-        lead_unit = next((u for u in attacker_units if u.get('is_lead')), attacker_units[0] if attacker_units else None)
+        
+        lead_unit = None
+        for uid, u in units_by_id.items():
+            if u.get('is_lead') and u.get('status') != 'out_of_action':
+                lead_unit = u
+                break
         
         logs.append(f"Applying Combat Result: {result_type}")
         
+        if result_type == 'StrategyCasualty':
+            # Only processing casualties (Ambush/Sniper) immediately
+            # Step 0 already handled the status updates for strategy_casualty_ids
+            logs.append("  -> Strategy Casualties applied immediately.")
+            return {
+                "updated_attacker_units": list(units_by_id.values()), # Return all units including updated ones
+                "updated_defender_unit": updated_defender, 
+                "new_morale": new_morale,
+                "area_update": area_update,
+                "logs": logs
+            }
+
         if result_type == 'Repulse':
             # 1. Lead Attacker -> OOA
             if lead_unit:
                 logs.append(f"  Lead Unit {lead_unit.get('name')} -> OOA")
-                # In actual DB, OOA is a location 'OOA' or status 'out_of_action'?
-                # Using status 'out_of_action' and location 'OOA' box.
                 lead_unit['status'] = 'out_of_action'
                 lead_unit['location'] = 'OOA' 
                 
             # 2. Others -> Spent
-            for u in attacker_units:
-                if u != lead_unit: # Object identity check might fail if copies, check ID
-                    # Check ID if possible, otherwise simple object comparison
-                    u_id = u.get('id')
-                    lead_id = lead_unit.get('id')
-                    is_lead = False
-                    if u_id and lead_id:
-                        is_lead = (u_id == lead_id)
-                    else:
-                        is_lead = (u == lead_unit)
-                        
-                    if not is_lead:
-                        u['status'] = 'spent'
-                        logs.append(f"  Unit {u.get('name')} -> Spent")
+            # Note: We must iterate all units to add them to updated_attackers list
+            for uid, u in units_by_id.items():
+                # Check directly if it is the modified lead unit object
+                is_lead_processed = (lead_unit and u['id'] == lead_unit['id'])
+                
+                if not is_lead_processed and u.get('status') != 'out_of_action':
+                    u['status'] = 'spent'
+                    logs.append(f"  Unit {u.get('name')} -> Spent")
+                
                 updated_attackers.append(u)
                 
             # 3. Morale -1
@@ -793,9 +841,10 @@ class GameLogic:
             logs.append(f"  Morale: {current_morale} -> {new_morale} (-1)")
             
         elif result_type == 'Stalemate':
-            # 1. All Attackers -> Spent
-            for u in attacker_units:
-                u['status'] = 'spent'
+            # 1. All Attackers -> Spent (Except OOA)
+            for uid, u in units_by_id.items():
+                if u.get('status') != 'out_of_action':
+                    u['status'] = 'spent'
                 updated_attackers.append(u)
             logs.append("  All Attacking Units -> Spent")
             
@@ -806,11 +855,13 @@ class GameLogic:
                 updated_defender['location'] = 'Eliminated'
                 logs.append(f"  Defender {updated_defender.get('name')} -> Eliminated")
                 
-            # 2. All Attackers -> Spent
-            for u in attacker_units:
-                u['status'] = 'spent'
+            # 2. All Attackers -> Spent (Except OOA)
+            for uid, u in units_by_id.items():
+                if u.get('status') != 'out_of_action':
+                    u['status'] = 'spent'
                 updated_attackers.append(u)
             logs.append("  All Attacking Units -> Spent")
+
             
             # 3. Control Marker
             area_update = {"control": "US"}

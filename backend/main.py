@@ -167,6 +167,7 @@ class ApplyCombatResultRequest(BaseModel):
     defenderUnit: Optional[Dict[str, Any]] = None
     targetArea: str
     currentMorale: int
+    strategyCasualtyIds: List[str] = []
 
 @app.post("/api/combat/apply_result")
 def apply_combat_result(data: ApplyCombatResultRequest):
@@ -178,7 +179,8 @@ def apply_combat_result(data: ApplyCombatResultRequest):
         data.attackerUnits,
         data.defenderUnit,
         data.targetArea,
-        data.currentMorale
+        data.currentMorale,
+        data.strategyCasualtyIds
     )
     return result
 

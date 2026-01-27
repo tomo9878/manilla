@@ -261,6 +261,58 @@ function App() {
         setCurrentPhase('Supply');
     };
 
+    // Proceed to Movement (from Supply)
+    const handleProceedToMovement = () => {
+        setCurrentPhase('Movement');
+        setContestedAreas([]);
+        recalculateContestedAreas();
+    };
+
+    const recalculateContestedAreas = () => {
+        // Find all areas where US and JP units coexist
+        const newContested = [];
+        mapData.forEach(area => {
+            const hasUS = units.some(u => u.faction === 'US' && !['out_of_action', 'eliminated'].includes(u.status) && (u.location === area.name || isPointInPolygon(u.x, u.y, area.points)));
+            const hasJP = units.some(u => u.faction === 'JP' && !['out_of_action', 'eliminated'].includes(u.status) && (u.location === area.name || isPointInPolygon(u.x, u.y, area.points)));
+
+            if (hasUS && hasJP) {
+                newContested.push(area.name);
+            }
+        });
+        setContestedAreas(newContested);
+    };
+
+    // --- Strategy Casualty Handler (Instant) ---
+    const handleStrategyCasualty = async (casualtyIds) => {
+        // Immediate Backend Call
+        try {
+            await fetch('/api/combat/apply_result', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    resultType: 'StrategyCasualty',
+                    attackerUnits: [], // Not needed for this type
+                    defenderUnit: null,
+                    targetArea: '',
+                    currentMorale: morale,
+                    strategyCasualtyIds: casualtyIds
+                })
+            });
+            console.log(`Strategy Casualties Applied: ${casualtyIds.join(', ')}`);
+        } catch (e) {
+            console.error("Strategy Casualty API Error", e);
+        }
+
+        // Immediate Frontend Update
+        setUnits(prev => prev.map(u => {
+            if (casualtyIds.includes(u.id)) {
+                return { ...u, status: 'out_of_action' };
+            }
+            return u;
+        }));
+    };
+
+
     const handleDawnPhase = async () => {
         try {
             const res = await fetch('/api/phase/dawn', {
@@ -738,9 +790,30 @@ function App() {
     };
 
     const handleUnitDragEnd = (id, newX, newY) => {
-        // Update position AND set status to spent on movement completion
-        setUnits(units.map(u => u.id === id ? { ...u, x: newX, y: newY, status: 'spent' } : u));
-        console.log(`Moved unit ${id} to ${newX}, ${newY}`);
+        // Find which area this is
+        const area = mapData.find(a => isPointInPolygon(newX, newY, a.points));
+        const locationName = area ? area.name : 'Unknown';
+
+        // Update position
+        setUnits(prev => {
+            const nextUnits = prev.map(u => u.id === id ? { ...u, x: newX, y: newY, location: locationName, status: u.status === 'fresh' ? 'fresh' : u.status } : u);
+
+            // Movement Phase Logic: Check contact
+            if (currentPhase === 'Movement') {
+                // Check if this area has JP units
+                const hasJP = nextUnits.some(u => u.faction === 'JP' && !['out_of_action', 'eliminated'].includes(u.status) && u.location === locationName);
+                if (hasJP) {
+                    // Mark contested
+                    setContestedAreas(prevCA => {
+                        if (!prevCA.includes(locationName)) return [...prevCA, locationName];
+                        return prevCA;
+                    });
+                }
+            }
+            return nextUnits;
+        });
+
+        console.log(`Moved unit ${id} to ${locationName}`);
     };
 
     const handleUnitDblClick = (id) => {
@@ -1394,6 +1467,23 @@ function App() {
                     <Layer imageSmoothingEnabled={false}>
                         <Rect x={-5000} y={-5000} width={10000} height={10000} fill="#333" />
                         <MapImage onImageLoad={handleImageLoad} />
+                        {contestedAreas.map(areaName => {
+                            const area = mapData.find(a => a.name === areaName);
+                            if (!area) return null;
+                            const center = getCentroid(area.points);
+                            return (
+                                <Text
+                                    key={`combat-${areaName}`}
+                                    x={center.x - 20}
+                                    y={center.y - 20}
+                                    text="⚔️"
+                                    fontSize={40}
+                                    onClick={() => handleCombatInitiation(areaName)}
+                                    onTap={() => handleCombatInitiation(areaName)}
+                                    listening={currentPhase === 'Combat'}
+                                />
+                            );
+                        })}
                         {mapData.map((area, i) => (
                             <Line
                                 key={i}
@@ -1533,7 +1623,7 @@ function App() {
                                 <hr style={{ borderColor: '#555', width: '100%', margin: '5px 0' }} />
 
                                 <button
-                                    onClick={handleProceedToCombat}
+                                    onClick={handleProceedToMovement}
                                     style={{
                                         width: '100%',
                                         background: '#4caf50',
@@ -1545,10 +1635,34 @@ function App() {
                                         fontWeight: 'bold'
                                     }}
                                 >
-                                    End Supply Phase (To Combat) &gt;
+                                    End Supply Phase (To Movement) &gt;
                                 </button>
                             </div>
                         )}
+
+                        {currentPhase === 'Movement' && (
+                            <div style={{ paddingTop: '10px', borderTop: '1px solid #555', marginTop: '10px' }}>
+                                <div style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '10px', fontStyle: 'italic' }}>
+                                    Move units into Japanese areas to mark them Contested (⚔️).
+                                </div>
+                                <button
+                                    onClick={handleProceedToCombat}
+                                    style={{
+                                        width: '100%',
+                                        background: '#f44336', // Red
+                                        color: 'white',
+                                        padding: '12px',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        borderRadius: '4px',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    Finish Movement (To Combat) &gt;
+                                </button>
+                            </div>
+                        )}
+
 
                         {currentPhase !== 'Supply' && (
                             <div style={{ fontSize: '0.8rem', color: '#777' }}>
@@ -1556,7 +1670,7 @@ function App() {
                             </div>
                         )}
                     </div>
-                </div>
+                </div >
 
                 <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Support Units</h3>
 
@@ -1623,65 +1737,70 @@ function App() {
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
 
             {/* Combat Modal */}
-            {showCombatModal && combatData && (
-                <CombatModal
-                    onClose={() => setShowCombatModal(false)}
-                    onApply={handleCombatApply}
-                    attackerUnits={combatData.attackerUnits}
-                    defenderUnit={combatData.defenderUnit}
-                    terrain={combatData.terrain}
-                    morale={morale}
-                />
-            )}
+            {
+                showCombatModal && combatData && (
+                    <CombatModal
+                        onClose={() => setShowCombatModal(false)}
+                        onApply={handleCombatApply}
+                        onStrategyCasualty={handleStrategyCasualty}
+                        attackerUnits={combatData.attackerUnits}
+                        defenderUnit={combatData.defenderUnit}
+                        terrain={combatData.terrain}
+                        morale={morale}
+                    />
+                )
+            }
 
             {/* Context Menu */}
-            {contextMenu && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: contextMenu.y,
-                        left: contextMenu.x,
-                        background: '#333',
-                        border: '1px solid #555',
-                        borderRadius: '4px',
-                        padding: '5px',
-                        zIndex: 1000,
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
-                        color: 'white',
-                        minWidth: '150px'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {contextMenu.type === 'recover' && (
-                        <button
-                            onClick={() => handleRecoverUnit(contextMenu.unitId)}
-                            style={{ display: 'block', width: '100%', padding: '8px', background: '#4caf50', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
-                        >
-                            Recover (2 Supply)
-                        </button>
-                    )}
-                    {contextMenu.type === 'area' && (
-                        <button
-                            onClick={() => handleToggleControl(contextMenu.areaName)}
-                            style={{ display: 'block', width: '100%', padding: '8px', background: usControlledAreas.includes(contextMenu.areaName) ? '#d32f2f' : '#2196f3', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
-                        >
-                            {usControlledAreas.includes(contextMenu.areaName) ? 'JP Recapture' : 'US Take Control'}
-                        </button>
-                    )}
-                    {contextMenu.type !== 'recover' && contextMenu.type !== 'area' && (
-                        <button
-                            onClick={() => handleRemoveUnit(contextMenu.unitId)}
-                            style={{ display: 'block', width: '100%', padding: '8px', background: '#f44336', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
-                        >
-                            {units.find(u => u.id === contextMenu.unitId)?.faction === 'JP' ? 'Eliminate Unit' : 'Send to Out of Action'}
-                        </button>
-                    )}
-                </div>
-            )}
-        </div>
+            {
+                contextMenu && (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            top: contextMenu.y,
+                            left: contextMenu.x,
+                            background: '#333',
+                            border: '1px solid #555',
+                            borderRadius: '4px',
+                            padding: '5px',
+                            zIndex: 1000,
+                            boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                            color: 'white',
+                            minWidth: '150px'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {contextMenu.type === 'recover' && (
+                            <button
+                                onClick={() => handleRecoverUnit(contextMenu.unitId)}
+                                style={{ display: 'block', width: '100%', padding: '8px', background: '#4caf50', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
+                            >
+                                Recover (2 Supply)
+                            </button>
+                        )}
+                        {contextMenu.type === 'area' && (
+                            <button
+                                onClick={() => handleToggleControl(contextMenu.areaName)}
+                                style={{ display: 'block', width: '100%', padding: '8px', background: usControlledAreas.includes(contextMenu.areaName) ? '#d32f2f' : '#2196f3', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
+                            >
+                                {usControlledAreas.includes(contextMenu.areaName) ? 'JP Recapture' : 'US Take Control'}
+                            </button>
+                        )}
+                        {contextMenu.type !== 'recover' && contextMenu.type !== 'area' && (
+                            <button
+                                onClick={() => handleRemoveUnit(contextMenu.unitId)}
+                                style={{ display: 'block', width: '100%', padding: '8px', background: '#f44336', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
+                            >
+                                {units.find(u => u.id === contextMenu.unitId)?.faction === 'JP' ? 'Eliminate Unit' : 'Send to Out of Action'}
+                            </button>
+                        )}
+                    </div>
+                )
+            }
+        </div >
     );
 }
 

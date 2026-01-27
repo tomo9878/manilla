@@ -6,7 +6,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_102.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Infantry",
+    "attack_factor": 5,
+    "defense_factor": 4,
+    "attack": 5,
+    "movement": 6
   },
   {
     "id": "1C_1-12",
@@ -15,7 +20,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_101.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Infantry",
+    "attack_factor": 5,
+    "defense_factor": 4,
+    "attack": 5,
+    "movement": 6
   },
   {
     "id": "1C_Chase",
@@ -24,7 +34,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_100.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Leader",
+    "attack_factor": 0,
+    "defense_factor": 1,
+    "attack": 0,
+    "movement": 6
   },
   {
     "id": "1C_2-7",
@@ -33,7 +48,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_99.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Infantry",
+    "attack_factor": 5,
+    "defense_factor": 4,
+    "attack": 5,
+    "movement": 6
   },
   {
     "id": "1C_2-8",
@@ -42,7 +62,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_98.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Infantry",
+    "attack_factor": 5,
+    "defense_factor": 4,
+    "attack": 5,
+    "movement": 6
   },
   {
     "id": "1C_Hoffman",
@@ -51,7 +76,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_97.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Leader",
+    "attack_factor": 0,
+    "defense_factor": 1,
+    "attack": 0,
+    "movement": 6
   },
   {
     "id": "1C_44A",
@@ -60,7 +90,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_150.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Tank",
+    "attack_factor": 7,
+    "defense_factor": 6,
+    "attack": 7,
+    "movement": 6
   },
   {
     "id": "1C_44B",
@@ -69,7 +104,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_149.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Tank",
+    "attack_factor": 7,
+    "defense_factor": 6,
+    "attack": 7,
+    "movement": 6
   },
   {
     "id": "1C_44D",
@@ -78,7 +118,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_148.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Tank",
+    "attack_factor": 5,
+    "defense_factor": 6,
+    "attack": 5,
+    "movement": 7
   },
   {
     "id": "1C_302rcn",
@@ -87,7 +132,12 @@
     "backImage": "ManilaVassalCounterCutTemplateFront_147.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Infantry",
+    "attack_factor": 3,
+    "defense_factor": 4,
+    "attack": 3,
+    "movement": 8
   },
   {
     "id": "37_1-129",
@@ -96,7 +146,12 @@
     "backImage": "us_37_1-129_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 6
   },
   {
     "id": "37_2-129",
@@ -105,7 +160,12 @@
     "backImage": "us_37_2-129_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 6
   },
   {
     "id": "37_3-129",
@@ -114,7 +174,12 @@
     "backImage": "us_37_3-129_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 6
   },
   {
     "id": "37_Fredrick",
@@ -123,7 +188,12 @@
     "backImage": "us_37_Fredrick_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Leader",
+    "attack_factor": 0,
+    "defense_factor": 1,
+    "attack": 0,
+    "movement": 6
   },
   {
     "id": "37_1-145",
@@ -132,7 +202,12 @@
     "backImage": "us_37_1-145_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 6
   },
   {
     "id": "37_2-145",
@@ -141,7 +216,12 @@
     "backImage": "us_37_2-145_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 6
   },
   {
     "id": "37_3-145",
@@ -150,7 +230,12 @@
     "backImage": "us_37_3-145_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 6
   },
   {
     "id": "37_Whitcomb",
@@ -159,7 +244,12 @@
     "backImage": "us_37_Whitcomb_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Leader",
+    "attack_factor": 0,
+    "defense_factor": 1,
+    "attack": 0,
+    "movement": 6
   },
   {
     "id": "37_1-148",
@@ -168,7 +258,12 @@
     "backImage": "us_37_1-148_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 6
   },
   {
     "id": "37_2-148",
@@ -177,7 +272,12 @@
     "backImage": "us_37_2-148_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 6
   },
   {
     "id": "37_3-148",
@@ -186,7 +286,12 @@
     "backImage": "us_37_3-148_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 6
   },
   {
     "id": "37_White",
@@ -195,7 +300,12 @@
     "backImage": "us_37_White_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 1"
+    "startArea": "Area 1",
+    "type": "Leader",
+    "attack_factor": 0,
+    "defense_factor": 1,
+    "attack": 0,
+    "movement": 6
   },
   {
     "id": "11-1-187",
@@ -203,7 +313,12 @@
     "frontImage": "us_11_1-187.jpg",
     "backImage": "us_11_1-187_back.jpg",
     "faction": "US",
-    "startArea": "Reinforcements"
+    "startArea": "Reinforcements",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 4
   },
   {
     "id": "11-2-187",
@@ -211,7 +326,12 @@
     "frontImage": "us_11_2-187.jpg",
     "backImage": "us_11_2-187_back.jpg",
     "faction": "US",
-    "startArea": "Reinforcements"
+    "startArea": "Reinforcements",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 4
   },
   {
     "id": "11-Hildebrand",
@@ -219,7 +339,12 @@
     "frontImage": "us_11_Hildebrand.jpg",
     "backImage": "us_11_Hildebrand_back.jpg",
     "faction": "US",
-    "startArea": "Reinforcements"
+    "startArea": "Reinforcements",
+    "type": "Leader",
+    "attack_factor": 0,
+    "defense_factor": 1,
+    "attack": 0,
+    "movement": 6
   },
   {
     "id": "11-1-188",
@@ -227,7 +352,12 @@
     "frontImage": "us_11_1-188.jpg",
     "backImage": "us_11_1-188_back.jpg",
     "faction": "US",
-    "startArea": "Reinforcements"
+    "startArea": "Reinforcements",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 4
   },
   {
     "id": "11-2-188",
@@ -235,7 +365,12 @@
     "frontImage": "us_11_2-188.jpg",
     "backImage": "us_11_2-188_back.jpg",
     "faction": "US",
-    "startArea": "Reinforcements"
+    "startArea": "Reinforcements",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 4
   },
   {
     "id": "11-Soule",
@@ -243,7 +378,12 @@
     "frontImage": "us_Soule.jpg",
     "backImage": "us_11_Soule_back.jpg",
     "faction": "US",
-    "startArea": "Reinforcements"
+    "startArea": "Reinforcements",
+    "type": "Leader",
+    "attack_factor": 0,
+    "defense_factor": 1,
+    "attack": 0,
+    "movement": 6
   },
   {
     "id": "11-1-511",
@@ -252,7 +392,12 @@
     "backImage": "us_11_1-511_back.jpg",
     "faction": "US",
     "startArea": "Area 30",
-    "setup": "on_map"
+    "setup": "on_map",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 4
   },
   {
     "id": "11-2-511",
@@ -261,7 +406,12 @@
     "backImage": "us_11_2-511_back.jpg",
     "faction": "US",
     "startArea": "Area 30",
-    "setup": "on_map"
+    "setup": "on_map",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 4
   },
   {
     "id": "11-3-511",
@@ -270,7 +420,12 @@
     "backImage": "us_11_3-511_back.jpg",
     "faction": "US",
     "startArea": "Area 30",
-    "setup": "on_map"
+    "setup": "on_map",
+    "type": "Infantry",
+    "attack_factor": 4,
+    "defense_factor": 4,
+    "attack": 4,
+    "movement": 4
   },
   {
     "id": "11-Haugen",
@@ -279,7 +434,12 @@
     "backImage": "us_11_Haugen_back.jpg",
     "faction": "US",
     "startArea": "Area 30",
-    "setup": "on_map"
+    "setup": "on_map",
+    "type": "Leader",
+    "attack_factor": 0,
+    "defense_factor": 1,
+    "attack": 0,
+    "movement": 6
   },
   {
     "id": "1C_754B",
@@ -287,7 +447,12 @@
     "frontImage": "us_1C_754B.jpg",
     "backImage": "us_1C_754B_back.jpg",
     "faction": "US",
-    "startArea": "Reinforcements"
+    "startArea": "Area 2",
+    "type": "Tank",
+    "attack_factor": 7,
+    "defense_factor": 6,
+    "attack": 7,
+    "movement": 6
   },
   {
     "id": "37_637A",
@@ -296,7 +461,12 @@
     "backImage": "us_37_637A_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Tank",
+    "attack_factor": 6,
+    "defense_factor": 6,
+    "attack": 6,
+    "movement": 6
   },
   {
     "id": "37_637B",
@@ -305,7 +475,12 @@
     "backImage": "us_37_637B_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Tank",
+    "attack_factor": 6,
+    "defense_factor": 6,
+    "attack": 6,
+    "movement": 6
   },
   {
     "id": "37_637C",
@@ -314,7 +489,12 @@
     "backImage": "us_37_637C_back.jpg",
     "faction": "US",
     "setup": "on_map",
-    "startArea": "Area 2"
+    "startArea": "Area 2",
+    "type": "Tank",
+    "attack_factor": 6,
+    "defense_factor": 6,
+    "attack": 6,
+    "movement": 6
   },
   {
     "id": "37_754A",
@@ -322,6 +502,11 @@
     "frontImage": "us_37_754A.jpg",
     "backImage": "us_37_754A_back.jpg",
     "faction": "US",
-    "startArea": "Reinforcements"
+    "startArea": "Area 1",
+    "type": "Tank",
+    "attack_factor": 7,
+    "defense_factor": 6,
+    "attack": 7,
+    "movement": 6
   }
 ]

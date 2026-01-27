@@ -188,6 +188,7 @@ function App() {
     const [hasBeenShaken, setHasBeenShaken] = useState(false); // Rule 11.6: Air Support unlock
     const [supplyRolled, setSupplyRolled] = useState(false); // Track if roll logic is done this turn
     const [bloodyStreetsQueue, setBloodyStreetsQueue] = useState([]);
+    const [contestedAreas, setContestedAreas] = useState([]); // Array of area names with '⚔️'
 
     // Event State
     const [currentEvent, setCurrentEvent] = useState(null);

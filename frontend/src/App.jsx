@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Stage, Layer, Image as KonvaImage, Line, Text, Group, Rect } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Line, Text, Group, Rect, Circle } from 'react-konva';
 import Konva from 'konva';
 import useImage from 'use-image';
 import unitsData from './units_data.json';
 import japaneseUnitsData from './japanese_units_data.json';
 import mapData from './map_data.json';
+import adjacencyData from './adjacency.json';
 import CombatModal from './components/CombatModal';
 
 
@@ -13,7 +14,7 @@ Konva.pixelRatio = window.devicePixelRatio || 1;
 
 const UNIT_SIZE = 100;
 
-const UnitCounter = ({ unit, x, y, indexInStack, onDragStart, onDragEnd, onClick, onDblClick, onHover, onContextMenu }) => {
+const UnitCounter = ({ unit, x, y, indexInStack, isSelected, onDragStart, onDragEnd, onClick, onDblClick, onHover, onContextMenu }) => {
     // Load both images to prevent flickering when flipping
     const [frontImg] = useImage(`/images/${unit.frontImage}`);
     const [backImg] = useImage(unit.backImage ? `/images/${unit.backImage}` : null);
@@ -73,8 +74,8 @@ const UnitCounter = ({ unit, x, y, indexInStack, onDragStart, onDragEnd, onClick
                 width={UNIT_SIZE}
                 height={UNIT_SIZE}
                 fill="#dcb"
-                stroke={isSpent ? "red" : "black"}
-                strokeWidth={isSpent ? 2 : 1}
+                stroke={isSelected ? "yellow" : (isSpent ? "red" : "black")}
+                strokeWidth={isSelected ? 4 : (isSpent ? 2 : 1)}
             />
 
             {currentImage ? (
@@ -184,6 +185,10 @@ function App() {
     // Game Phase State
     const [turn, setTurn] = useState(1);
     const [currentPhase, setCurrentPhase] = useState('Setup'); // Setup, Dawn, Event, Supply, Combat, End
+
+    // Click-to-Move State
+    const [selectedUnitId, setSelectedUnitId] = useState(null);
+    const [movementOptions, setMovementOptions] = useState([]); // Array of area names
     const [morale, setMorale] = useState(19);
     const [hasBeenShaken, setHasBeenShaken] = useState(false); // Rule 11.6: Air Support unlock
     const [supplyRolled, setSupplyRolled] = useState(false); // Track if roll logic is done this turn
@@ -262,11 +267,17 @@ function App() {
         setCurrentPhase('Supply');
     };
 
-    // Proceed to Movement (from Supply)
-    const handleProceedToMovement = () => {
-        setCurrentPhase('Movement');
+    // Proceed to Action Phase (from Supply)
+    const handleProceedToAction = () => {
+        setCurrentPhase('Action');
         setContestedAreas([]);
-        recalculateContestedAreas();
+        // recalculateContestedAreas(); // Dynamic now
+    };
+
+    const handleEndTurn = () => {
+        if (!window.confirm("End Action Phase and finish Turn?")) return;
+        setCurrentPhase('End');
+        // Logic for next turn would go here
     };
 
     const recalculateContestedAreas = () => {
@@ -630,8 +641,9 @@ function App() {
         setContextMenu({
             x: e.clientX,
             y: e.clientY,
+
             unitId,
-            type: 'remove' // Action available for map units
+            type: 'unit' // Changed from 'remove' to generic 'unit' to support more options
         });
     };
 
@@ -799,8 +811,8 @@ function App() {
         setUnits(prev => {
             const nextUnits = prev.map(u => u.id === id ? { ...u, x: newX, y: newY, location: locationName, status: u.status === 'fresh' ? 'fresh' : u.status } : u);
 
-            // Movement Phase Logic: Check contact
-            if (currentPhase === 'Movement') {
+            // Action Phase Logic: Check contact
+            if (currentPhase === 'Action') {
                 // Check if this area has JP units
                 const hasJP = nextUnits.some(u => u.faction === 'JP' && !['out_of_action', 'eliminated'].includes(u.status) && u.location === locationName);
                 if (hasJP) {
@@ -826,6 +838,26 @@ function App() {
         }));
     };
 
+    const handleMoveSelect = (targetAreaName) => {
+        if (!selectedUnitId) return;
+        const targetArea = mapData.find(a => a.name === targetAreaName);
+        if (!targetArea) return;
+
+        // Calculate new X/Y (Centroid or random offset in area)
+        const centroid = getCentroid(targetArea.points);
+        // Add random jitter to avoid perfect stacking
+        const jitter = 20;
+        const newX = centroid.x + (Math.random() * jitter - jitter / 2);
+        const newY = centroid.y + (Math.random() * jitter - jitter / 2);
+
+        // Execute Move
+        handleUnitDragEnd(selectedUnitId, newX, newY); // Reuse logic
+
+        // Reset Selection
+        setSelectedUnitId(null);
+        setMovementOptions([]);
+    };
+
     const handleUnitClick = (id) => {
         // Bloody Streets Interception
         if (bloodyStreetsQueue.length > 0) {
@@ -833,12 +865,47 @@ function App() {
             return;
         }
 
-        // Rotate stack logic
         const clickedUnit = units.find(u => u.id === id);
         if (!clickedUnit) return;
 
         console.log(`Clicked unit: ${id}`, clickedUnit);
 
+        // --- Click-to-Move Logic (Action Phase & US & Fresh) ---
+        if (currentPhase === 'Action' && clickedUnit.faction === 'US' && clickedUnit.status === 'fresh') {
+            // If already selected, deselect? Or maybe rotate stack? 
+            // Let's toggle selection.
+            if (selectedUnitId === id) {
+                setSelectedUnitId(null);
+                setMovementOptions([]);
+                return;
+            }
+
+            // Select Unit
+            setSelectedUnitId(id);
+
+            // Calculate Options
+            const currentLoc = clickedUnit.location;
+            const adjacent = adjacencyData[currentLoc] || [];
+
+            // Filter valid options (exclude impassable, etc)
+            // Rule: Check Stacking Limit (max 6 US units in target)
+            const validOptions = adjacent.filter(adjName => {
+                // Stacking Check
+                const unitsInTarget = units.filter(u => u.faction === 'US' && u.location === adjName && !['out_of_action', 'eliminated'].includes(u.status));
+                if (unitsInTarget.length >= 6) return false;
+
+                // Impassable Check (River) -> Using Map Data 'terrain'? Or Adjacency already handles it?
+                // The generator removed Pasig River links (11/12 <-> 37).
+                // So adjacency list is trusted.
+                return true;
+            });
+
+            console.log(`Movement Options for ${currentLoc}:`, validOptions);
+            setMovementOptions(validOptions);
+            return; // Skip stack rotation if selecting for move
+        }
+
+        // --- Standard Stack Rotation Logic (Fallback) ---
         // Find units in the same stack (very close proximity)
         const stackThreshold = 60; // Increased threshold
         const stackUnits = units.filter(u =>
@@ -846,43 +913,16 @@ function App() {
             Math.abs(u.y - clickedUnit.y) < stackThreshold
         );
 
-        console.log(`Found ${stackUnits.length} units in stack.`);
-
         if (stackUnits.length <= 1) return; // No stack to rotate
 
         // Sort stack units by visual order (Y then X ascending)
-        // Smaller X/Y = "Back", Larger X/Y = "Front"
         const sortedStackUnits = [...stackUnits].sort((a, b) => (a.y - b.y) || (a.x - b.x));
-
-        // Find current index of clicked unit in the sorted stack
-        const currentIndex = sortedStackUnits.findIndex(u => u.id === id);
-        console.log(`Current index in stack: ${currentIndex} / ${sortedStackUnits.length - 1}`);
-
-        // We want to move the Currently Clicked Unit (presumably the top/last one visually)
-        // to the BOTTOM (index 0). And shift everyone else up.
-        // Actually, let's just cycle the positions:
-        // Position[i] takes the unit from sortedStackUnits[(i + 1) % N]
-        // This shifts units "Left/Up" in the array (Towards 0).
-        // The unit at 0 moves to N-1 (Top). Wait, that brings back to front.
-
-        // To "send to back": The unit at Top (N-1) should go to Bottom (0).
-        // Unit at 0 should go to 1.
-
-        // Let's capture the POSITIONS.
         const positions = sortedStackUnits.map(u => ({ x: u.x, y: u.y }));
 
         // Map new units state
         const newUnits = units.map(u => {
-            // Is this unit in the stack?
             const stackIdx = sortedStackUnits.findIndex(s => s.id === u.id);
             if (stackIdx === -1) return u;
-
-            // It is in the stack. Logic:
-            // If stackIdx is Top (N-1), it moves to Pos 0.
-            // If stackIdx is k, it moves to Pos k+1.
-
-            // This assumes the clicked unit IS the top unit.
-            // If the user clicks a unit in the middle (because top is transparent?), this still cycles.
 
             let newPosIdx;
             if (stackIdx === sortedStackUnits.length - 1) {
@@ -1112,7 +1152,8 @@ function App() {
                     ...unit,
                     x: center.x - UNIT_SIZE / 2, // Centering adjustments
                     y: center.y - UNIT_SIZE / 2,
-                    status: 'fresh' // fresh = hidden/chit side
+                    status: 'fresh', // fresh = hidden/chit side
+                    location: area.name // Explicitly set location
                 });
             }
         });
@@ -1481,8 +1522,42 @@ function App() {
                                     fontSize={40}
                                     onClick={() => handleCombatInitiation(areaName)}
                                     onTap={() => handleCombatInitiation(areaName)}
-                                    listening={currentPhase === 'Combat'}
+                                    listening={currentPhase === 'Action'}
                                 />
+                            );
+                        })}
+                        {movementOptions.map(areaName => {
+                            const area = mapData.find(a => a.name === areaName);
+                            if (!area) return null;
+                            const center = getCentroid(area.points);
+                            return (
+                                <Group
+                                    key={`move-${areaName}`}
+                                    onClick={() => handleMoveSelect(areaName)}
+                                    onTap={() => handleMoveSelect(areaName)}
+                                    onMouseEnter={() => document.body.style.cursor = 'pointer'}
+                                    onMouseLeave={() => document.body.style.cursor = 'default'}
+                                >
+                                    <Circle
+                                        x={center.x}
+                                        y={center.y}
+                                        radius={30}
+                                        fill="rgba(0, 255, 0, 0.4)"
+                                        stroke="lime"
+                                        strokeWidth={2}
+                                    />
+                                    <Text
+                                        x={center.x - 20}
+                                        y={center.y - 6}
+                                        text="MOVE"
+                                        fontSize={12}
+                                        fill="white"
+                                        fontStyle="bold"
+                                        width={40}
+                                        align="center"
+                                        listening={false}
+                                    />
+                                </Group>
                             );
                         })}
                         {mapData.map((area, i) => (
@@ -1511,17 +1586,10 @@ function App() {
                                     setHoveredArea(null);
                                 }}
                                 onClick={() => {
-                                    if (currentPhase === 'Combat') {
-                                        handleCombatInitiation(area.name);
-                                    }
+                                    /* if (currentPhase === 'Action') ... */
                                     setSelectedArea(area);
                                 }}
-                                onTap={() => {
-                                    if (currentPhase === 'Combat') {
-                                        handleCombatInitiation(area.name);
-                                    }
-                                    setSelectedArea(area);
-                                }}
+
                                 onContextMenu={(e) => handleAreaContextMenu(e, area.name)}
                             />
                         ))}
@@ -1534,6 +1602,7 @@ function App() {
                                 x={unit.x}
                                 y={unit.y}
                                 indexInStack={stackMap[unit.id] || 0}
+                                isSelected={unit.id === selectedUnitId}
                                 onDragStart={handleUnitDragStart}
                                 onDragEnd={handleUnitDragEnd}
                                 onClick={handleUnitClick}
@@ -1624,7 +1693,7 @@ function App() {
                                 <hr style={{ borderColor: '#555', width: '100%', margin: '5px 0' }} />
 
                                 <button
-                                    onClick={handleProceedToMovement}
+                                    onClick={handleProceedToAction}
                                     style={{
                                         width: '100%',
                                         background: '#4caf50',
@@ -1636,18 +1705,18 @@ function App() {
                                         fontWeight: 'bold'
                                     }}
                                 >
-                                    End Supply Phase (To Movement) &gt;
+                                    End Supply Phase (Start Action) &gt;
                                 </button>
                             </div>
                         )}
 
-                        {currentPhase === 'Movement' && (
+                        {currentPhase === 'Action' && (
                             <div style={{ paddingTop: '10px', borderTop: '1px solid #555', marginTop: '10px' }}>
                                 <div style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '10px', fontStyle: 'italic' }}>
-                                    Move units into Japanese areas to mark them Contested (⚔️).
+                                    Move units or Right-Click areas to Resolve Combat.
                                 </div>
                                 <button
-                                    onClick={handleProceedToCombat}
+                                    onClick={handleEndTurn}
                                     style={{
                                         width: '100%',
                                         background: '#f44336', // Red
@@ -1659,7 +1728,7 @@ function App() {
                                         fontWeight: 'bold'
                                     }}
                                 >
-                                    Finish Movement (To Combat) &gt;
+                                    End Action Phase (Finish Turn) &gt;
                                 </button>
                             </div>
                         )}
@@ -1782,21 +1851,73 @@ function App() {
                                 Recover (2 Supply)
                             </button>
                         )}
+
                         {contextMenu.type === 'area' && (
-                            <button
-                                onClick={() => handleToggleControl(contextMenu.areaName)}
-                                style={{ display: 'block', width: '100%', padding: '8px', background: usControlledAreas.includes(contextMenu.areaName) ? '#d32f2f' : '#2196f3', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
-                            >
-                                {usControlledAreas.includes(contextMenu.areaName) ? 'JP Recapture' : 'US Take Control'}
-                            </button>
+                            <>
+                                {/* Combat Initiation Check */}
+                                {(() => {
+                                    const areaUnits = units.filter(u => u.location === contextMenu.areaName && !['out_of_action', 'eliminated'].includes(u.status));
+                                    const hasUS = areaUnits.some(u => u.faction === 'US');
+                                    const hasJP = areaUnits.some(u => u.faction === 'JP');
+                                    console.log(`Context Menu Check for ${contextMenu.areaName}: US=${hasUS}, JP=${hasJP}`, areaUnits);
+                                    if (hasUS && hasJP) {
+                                        return (
+                                            <button
+                                                onClick={() => {
+                                                    handleCombatInitiation(contextMenu.areaName);
+                                                    setContextMenu(null);
+                                                }}
+                                                style={{ display: 'block', width: '100%', padding: '8px', marginBottom: '5px', background: '#ff9800', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px', fontWeight: 'bold' }}
+                                            >
+                                                ⚔️ Resolve Combat
+                                            </button>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+
+                                <button
+                                    onClick={() => handleToggleControl(contextMenu.areaName)}
+                                    style={{ display: 'block', width: '100%', padding: '8px', background: usControlledAreas.includes(contextMenu.areaName) ? '#d32f2f' : '#2196f3', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
+                                >
+                                    {usControlledAreas.includes(contextMenu.areaName) ? 'JP Recapture' : 'US Take Control'}
+                                </button>
+                            </>
                         )}
-                        {contextMenu.type !== 'recover' && contextMenu.type !== 'area' && (
-                            <button
-                                onClick={() => handleRemoveUnit(contextMenu.unitId)}
-                                style={{ display: 'block', width: '100%', padding: '8px', background: '#f44336', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
-                            >
-                                {units.find(u => u.id === contextMenu.unitId)?.faction === 'JP' ? 'Eliminate Unit' : 'Send to Out of Action'}
-                            </button>
+                        {contextMenu.type === 'unit' && (
+                            <>
+                                {/* Combat Initiation Check for Unit Context */}
+                                {(() => {
+                                    const unit = units.find(u => u.id === contextMenu.unitId);
+                                    if (unit) {
+                                        const areaUnits = units.filter(u => u.location === unit.location && !['out_of_action', 'eliminated'].includes(u.status));
+                                        const hasUS = areaUnits.some(u => u.faction === 'US');
+                                        const hasJP = areaUnits.some(u => u.faction === 'JP');
+
+                                        if (hasUS && hasJP && currentPhase === 'Action') {
+                                            return (
+                                                <button
+                                                    onClick={() => {
+                                                        handleCombatInitiation(unit.location);
+                                                        setContextMenu(null);
+                                                    }}
+                                                    style={{ display: 'block', width: '100%', padding: '8px', marginBottom: '5px', background: '#ff9800', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px', fontWeight: 'bold' }}
+                                                >
+                                                    ⚔️ Resolve Combat
+                                                </button>
+                                            );
+                                        }
+                                    }
+                                    return null;
+                                })()}
+
+                                <button
+                                    onClick={() => handleRemoveUnit(contextMenu.unitId)}
+                                    style={{ display: 'block', width: '100%', padding: '8px', background: '#f44336', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
+                                >
+                                    {units.find(u => u.id === contextMenu.unitId)?.faction === 'JP' ? 'Eliminate Unit' : 'Send to Out of Action'}
+                                </button>
+                            </>
                         )}
                     </div>
                 )

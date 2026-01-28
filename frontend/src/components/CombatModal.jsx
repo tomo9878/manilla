@@ -31,12 +31,36 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
     // Calculation & Result
     const [calculatedStats, setCalculatedStats] = useState({ av: 0, dv: 0, logs: [] });
     // ... (rest of state)
+    const [participatingIds, setParticipatingIds] = useState(new Set());
+    const [combatLogs, setCombatLogs] = useState([]);
+    const [combatResult, setCombatResult] = useState(null);
+    const [isRolling, setIsRolling] = useState(false);
 
-    // ... (useEffect omitted)
+    // Initialization check
+    useEffect(() => {
+        if (attackerUnits.length > 0) {
+            setActiveAttackers(attackerUnits);
+            // Default: All participate initially
+            setParticipatingIds(new Set(attackerUnits.map(u => u.id)));
+            // Auto Select Lead (Highest AV or first) for display
+            setSelectedLeadId(attackerUnits[0].id);
+        }
+    }, [attackerUnits]);
 
-    // Log helper ...
+    const addLog = (msg, type = 'info') => {
+        setCombatLogs(prev => [...prev, { msg, type }]);
+    };
 
-    // ...
+    const isLeader = (unit) => /HQ|Gen|Leader|Beightler|Chase|Haugen|Griswold/i.test(unit.name) || /HQ/i.test(unit.type);
+
+    const handleReveal = () => {
+        setIsRevealed(true);
+        if (onReveal && defenderUnit) {
+            onReveal(defenderUnit.id);
+        }
+        setStep('STRATEGY');
+        setTimeout(() => processDefenseStrategy(), 1000);
+    };
 
     const processDefenseStrategy = () => {
         if (!defenderUnit) return;

@@ -1,197 +1,264 @@
 {
   "Area 1": [
-    "Area 10",
-    "Area 9"
+    "Area 2",
+    "Area 9",
+    "Area 10"
   ],
   "Area 2": [
+    "Area 1",
     "Area 3",
-    "Area 7"
-  ],
-  "Area 3": [
-    "Area 2"
-  ],
-  "Area 4": [
-    "Area 16",
-    "Area 5"
-  ],
-  "Area 5": [
-    "Area 15",
-    "Area 4",
-    "Area 6"
-  ],
-  "Area 6": [
-    "Area 5"
-  ],
-  "Area 7": [
-    "Area 14",
-    "Area 2",
-    "Area 8"
-  ],
-  "Area 8": [
-    "Area 13",
-    "Area 14",
+    "Area 6",
     "Area 7",
     "Area 9"
   ],
+  "Area 3": [
+    "Area 2",
+    "Area 4",
+    "Area 5",
+    "Area 6"
+  ],
+  "Area 4": [
+    "Area 3",
+    "Area 5",
+    "Area 16"
+  ],
+  "Area 5": [
+    "Area 3",
+    "Area 4",
+    "Area 6",
+    "Area 7",
+    "Area 15",
+    "Area 16"
+  ],
+  "Area 6": [
+    "Area 2",
+    "Area 3",
+    "Area 5",
+    "Area 7"
+  ],
+  "Area 7": [
+    "Area 2",
+    "Area 5",
+    "Area 15",
+    "Area 6",
+    "Area 8",
+    "Area 9",
+    "Area 14"
+  ],
+  "Area 8": [
+    "Area 7",
+    "Area 9",
+    "Area 10",
+    "Area 12",
+    "Area 13",
+    "Area 14"
+  ],
   "Area 9": [
     "Area 1",
-    "Area 10",
-    "Area 8"
+    "Area 2",
+    "Area 7",
+    "Area 8",
+    "Area 10"
   ],
   "Area 10": [
     "Area 1",
+    "Area 8",
+    "Area 9",
     "Area 11",
-    "Area 9"
+    "Area 12"
   ],
   "Area 11": [
     "Area 10",
     "Area 12"
   ],
   "Area 12": [
-    "Area 11"
+    "Area 8",
+    "Area 10",
+    "Area 11",
+    "Area 13",
+    "Area 35"
   ],
   "Area 13": [
+    "Area 8",
+    "Area 12",
     "Area 14",
     "Area 34",
-    "Area 8"
+    "Area 35"
   ],
   "Area 14": [
+    "Area 7",
+    "Area 8",
     "Area 13",
     "Area 15",
     "Area 17",
     "Area 18",
-    "Area 7",
-    "Area 8"
+    "Area 34"
   ],
   "Area 15": [
+    "Area 5",
+    "Area 7",
+    "Area 16",
     "Area 14",
-    "Area 17",
-    "Area 5"
+    "Area 17"
   ],
   "Area 16": [
-    "Area 20",
-    "Area 4"
+    "Area 4",
+    "Area 5",
+    "Area 15",
+    "Area 17",
+    "Area 19",
+    "Area 20"
   ],
   "Area 17": [
+    "Area 5",
     "Area 14",
     "Area 15",
-    "Area 18"
+    "Area 16",
+    "Area 18",
+    "Area 19"
   ],
   "Area 18": [
     "Area 14",
     "Area 17",
-    "Area 33"
+    "Area 19",
+    "Area 23",
+    "Area 32",
+    "Area 33",
+    "Area 34"
   ],
   "Area 19": [
+    "Area 17",
+    "Area 18",
     "Area 20",
-    "Area 21"
+    "Area 21",
+    "Area 22",
+    "Area 23"
   ],
   "Area 20": [
+    "Area 4",
     "Area 16",
-    "Area 19"
+    "Area 19",
+    "Area 21"
   ],
   "Area 21": [
     "Area 19",
-    "Area 26"
+    "Area 20",
+    "Area 26",
+    "Area 22"
   ],
   "Area 22": [
+    "Area 19",
+    "Area 21",
     "Area 23",
     "Area 24",
-    "Area 25"
+    "Area 25",
+    "Area 26"
   ],
   "Area 23": [
+    "Area 18",
+    "Area 19",
     "Area 22",
-    "Area 32"
+    "Area 24",
+    "Area 29",
+    "Area 32",
+    "Area 33"
   ],
   "Area 24": [
     "Area 22",
+    "Area 23",
     "Area 25",
-    "Area 29"
+    "Area 27",
+    "Area 28",
+    "Area 29",
+    "Area 32"
   ],
   "Area 25": [
     "Area 22",
-    "Area 24"
-  ],
-  "Area 26": [
-    "Area 21",
+    "Area 24",
+    "Area 26",
     "Area 27"
   ],
-  "Area 27": [
-    "Area 26"
+  "Area 26": [
+    "Area 22",
+    "Area 27",
+    "Area 21",
+    "Area 25"
   ],
-  "Area 28": [],
+  "Area 27": [
+    "Area 25",
+    "Area 24",
+    "Area 26",
+    "Area 28"
+  ],
+  "Area 28": [
+    "Area 22",
+    "Area 24",
+    "Area 27",
+    "Area 30",
+    "Area 29"
+  ],
   "Area 29": [
     "Area 24",
-    "Area 30"
+    "Area 28",
+    "Area 23",
+    "Area 31",
+    "Area 30",
+    "Area 32"
   ],
   "Area 30": [
+    "Area 31",
     "Area 29",
-    "Area 31"
+    "Area 28",
+    "Area 32"
   ],
   "Area 31": [
     "Area 30",
+    "Area 32",
+    "Area 29",
+    "Area 33",
     "Area 36"
   ],
   "Area 32": [
     "Area 23",
-    "Area 33"
+    "Area 24",
+    "Area 29",
+    "Area 30",
+    "Area 31",
+    "Area 33",
+    "Area 18"
   ],
   "Area 33": [
     "Area 18",
-    "Area 32"
+    "Area 31",
+    "Area 32",
+    "Area 34",
+    "Area 35",
+    "Area 36"
   ],
   "Area 34": [
     "Area 13",
+    "Area 14",
+    "Area 18",
+    "Area 33",
     "Area 35"
   ],
   "Area 35": [
+    "Area 12",
+    "Area 13",
+    "Area 33",
     "Area 34",
     "Area 36",
     "Area 37"
   ],
   "Area 36": [
     "Area 31",
+    "Area 32",
+    "Area 33",
     "Area 35",
     "Area 37"
   ],
   "Area 37": [
     "Area 35",
     "Area 36"
-  ],
-  "Clear Chits": [],
-  "Elevated Chits": [],
-  "OOA": [],
-  "Turn 1": [
-    "Turn 4"
-  ],
-  "Turn 2": [],
-  "Turn 3": [
-    "Turn 6"
-  ],
-  "Turn 4": [
-    "Turn 1",
-    "Turn 5",
-    "Turn 7"
-  ],
-  "Turn 5": [
-    "Turn 4",
-    "Turn 8"
-  ],
-  "Turn 6": [
-    "Turn 3",
-    "Turn 9"
-  ],
-  "Turn 7": [
-    "Turn 4",
-    "Turn 8"
-  ],
-  "Turn 8": [
-    "Turn 5",
-    "Turn 7",
-    "Turn 9"
-  ],
-  "Turn 9": [
-    "Turn 6",
-    "Turn 8"
   ]
 }

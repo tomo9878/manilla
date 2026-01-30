@@ -7,19 +7,22 @@ class GameLogic:
         self.adjacency = {}
         try:
             # Load adjacency data
-            # Assuming backend/adjacency.json relative to current working dir or file location
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            adj_path = os.path.join(base_dir, 'adjacency.json')
+            # Load adjacency data from Single Source of Truth (frontend/src/adjacency.json)
+            # This avoids duplication between frontend and backend.
+            base_dir = os.path.dirname(os.path.abspath(__file__)) # .../manila/backend
+            # Target: .../manila/frontend/src/adjacency.json
+            adj_path = os.path.abspath(os.path.join(base_dir, '..', 'frontend', 'src', 'adjacency.json'))
+            
             if os.path.exists(adj_path):
                 with open(adj_path, 'r', encoding='utf-8') as f:
                     self.adjacency = json.load(f)
             else:
-                # Fallback for dev/testing if file not found in module dir
-                if os.path.exists('backend/adjacency.json'):
-                    with open('backend/adjacency.json', 'r', encoding='utf-8') as f:
+                print(f"Warning: Adjacency file not found at {adj_path}")
+                # Fallback purely for safety, though we intend to delete the backend one
+                fallback = os.path.join(base_dir, 'adjacency.json')
+                if os.path.exists(fallback):
+                    with open(fallback, 'r', encoding='utf-8') as f:
                         self.adjacency = json.load(f)
-                else:
-                    print("Warning: adjacency.json not found.")
         except Exception as e:
             print(f"Error loading adjacency: {e}")
 
@@ -792,7 +795,13 @@ class GameLogic:
                     u = units_by_id[cid]
                     u['status'] = 'out_of_action'
                     u['location'] = 'OOA'
-                    logs.append(f"Strategy Casualty: {u.get('name')} ({u.get('id')}) -> OOA")
+                    logs.append(f"Strategy Casualty (Attacker): {u.get('name')} ({u.get('id')}) -> OOA")
+                
+                # Check if defender is the casualty
+                if updated_defender and updated_defender['id'] == cid:
+                    updated_defender['status'] = 'out_of_action'
+                    updated_defender['location'] = 'OOA'
+                    logs.append(f"Strategy Casualty (Defender): {updated_defender.get('name')} ({cid}) -> OOA")
         
         # Identify Lead
         # Assuming frontend passes 'is_lead': True in one unit
@@ -835,7 +844,12 @@ class GameLogic:
                     logs.append(f"  Unit {u.get('name')} -> Spent")
                 
                 updated_attackers.append(u)
-                
+            
+            # Reveal Defender if not eliminated
+            if updated_defender and updated_defender.get('status') != 'eliminated':
+                updated_defender['status'] = 'revealed'
+                logs.append(f"  Defender Revealed: {updated_defender.get('name')}")
+
             # 3. Morale -1
             new_morale -= 1
             logs.append(f"  Morale: {current_morale} -> {new_morale} (-1)")
@@ -847,6 +861,11 @@ class GameLogic:
                     u['status'] = 'spent'
                 updated_attackers.append(u)
             logs.append("  All Attacking Units -> Spent")
+
+            # Reveal Defender
+            if updated_defender and updated_defender.get('status') != 'eliminated':
+                updated_defender['status'] = 'revealed'
+                logs.append(f"  Defender Revealed: {updated_defender.get('name')}")
             
         elif result_type == 'Success':
             # 1. Defender -> Eliminated

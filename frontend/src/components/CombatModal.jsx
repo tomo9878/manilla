@@ -47,6 +47,13 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         }
     }, [attackerUnits]);
 
+    // Auto-Recalculate trigger
+    useEffect(() => {
+        if (step === 'SETUP' && selectedLeadId && activeAttackers.length > 0) {
+            recalculate();
+        }
+    }, [step, selectedLeadId, participatingIds, support, activeAttackers]);
+
     const addLog = (msg, type = 'info') => {
         setCombatLogs(prev => [...prev, { msg, type }]);
     };
@@ -218,7 +225,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
             onApply({
                 resultType: combatResult.resultTypeActual,
                 attackerUnits: activeAttackers.filter(u => participatingIds.has(u.id)).map(u => ({ ...u, is_lead: u.id === selectedLeadId })),
-                defenderUnit: defenderUnit,
+                defenderUnit: isRevealed ? { ...defenderUnit, status: 'revealed' } : defenderUnit,
                 targetArea: "Combat Area",
                 currentMorale: morale,
                 strategyCasualtyIds: strategyCasualtyIds

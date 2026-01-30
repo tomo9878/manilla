@@ -20,10 +20,12 @@ const UnitCounter = ({ unit, x, y, indexInStack, isSelected, onDragStart, onDrag
     const [backImg] = useImage(unit.backImage ? `/images/${unit.backImage}` : null);
 
     // Determine current image based on status
-    const isSpent = unit.status === 'spent';
+    // US: spent -> backImage
+    // JP: revealed -> backImage
+    const showBack = unit.status === 'spent' || unit.status === 'revealed';
 
-    // Use back image if spent and available, otherwise fallback to front
-    const currentImage = (isSpent && backImg) ? backImg : frontImg;
+    // Use back image if condition met and available, otherwise fallback to front
+    const currentImage = (showBack && backImg) ? backImg : frontImg;
 
     // Stack offset logic
     const offset = (indexInStack || 0) * 5;
@@ -32,7 +34,7 @@ const UnitCounter = ({ unit, x, y, indexInStack, isSelected, onDragStart, onDrag
         <Group
             x={x + offset}
             y={y + offset}
-            draggable={!isSpent}
+            draggable={unit.status !== 'spent'}
             onDragStart={(e) => {
                 onDragStart && onDragStart(unit.id);
             }}
@@ -74,8 +76,8 @@ const UnitCounter = ({ unit, x, y, indexInStack, isSelected, onDragStart, onDrag
                 width={UNIT_SIZE}
                 height={UNIT_SIZE}
                 fill="#dcb"
-                stroke={isSelected ? "yellow" : (isSpent ? "red" : "black")}
-                strokeWidth={isSelected ? 4 : (isSpent ? 2 : 1)}
+                stroke={isSelected ? "yellow" : (unit.status === 'spent' ? "red" : "black")}
+                strokeWidth={isSelected ? 4 : (unit.status === 'spent' ? 2 : 1)}
             />
 
             {currentImage ? (
@@ -198,6 +200,10 @@ function App() {
     // Event State
     const [currentEvent, setCurrentEvent] = useState(null);
     const [lastEvent, setLastEvent] = useState(null); // Keeps track of important previous events (Pause)
+
+    // Impulse / Action State
+    const [activeArea, setActiveArea] = useState(null); // The currently activated area for the impulse
+    const [impulseUnits, setImpulseUnits] = useState([]); // Track unit IDs that acted in this impulse (for Undo or Commit)
 
     // Helper: Determine US Controlled Tags
     const getUsControlledTags = () => {
@@ -477,21 +483,67 @@ function App() {
         checkBloodyStreets();
     };
 
+    // Unit Reveal Handler (for JP Units)
+    const handleUnitReveal = (unitId) => {
+        setUnits(prev => prev.map(u => {
+            if (u.id === unitId) {
+                // Keep other properties, just update status
+                // Maintain location!
+                return { ...u, status: 'revealed' };
+            }
+            return u;
+        }));
+    };
+
     // --- Combat Logic ---
     const handleCombatInitiation = (areaName) => {
+        // Active Area Check
+        if (activeArea && activeArea !== areaName) {
+            // Exception: Allow combat in adjacent areas (Move & Attack context)
+            const adj = adjacencyData[activeArea] || [];
+            const isAdjacent = adj.includes(areaName);
+
+            if (!isAdjacent) {
+                alert(`Impulse active for ${activeArea}. Combat in ${areaName} is too far or unrelated. Finish current impulse first.`);
+                return;
+            }
+            // Valid continuation (Move -> Combat)
+        }
+
         // Find units in this area
-        const areaUnits = units.filter(u => u.location === areaName && u.status !== 'eliminated' && u.status !== 'out_of_action');
+        const areaUnits = units.filter(u => u.location === areaName && !['eliminated', 'out_of_action'].includes(u.status));
         const attackers = areaUnits.filter(u => u.faction === 'US');
         const defenders = areaUnits.filter(u => u.faction === 'JP');
 
+        console.log(`Combat Init [${areaName}]: US=${attackers.length}, JP=${defenders.length}`);
+        attackers.forEach(u => console.log(`  US: ${u.id} ${u.name} (AF=${u.attack_factor}, Att=${u.attack})`));
+
         if (attackers.length === 0) return; // No US units
-        if (defenders.length === 0) return; // No Enemy (Control Logic?)
+        if (defenders.length === 0) return; // No Enemy
 
         // Setup Data
         const area = mapData.find(a => a.name === areaName);
+
+        // Prepare Defender Data ensuring strength exists from JSON fields
+        const defender = defenders[0];
+        // JSON might have 'strength' (for Hidden/JP) or 'defense_factor'
+        const defStrength = defender.defense_factor || defender.strength || 3;
+
+        const defenderData = {
+            ...defender,
+            strength: defStrength,
+            unitClass: defender.unitClass || 'Infantry'
+        };
+
+        // Prepare Attacker Data ensuring attack_factor exists
+        const attackerData = attackers.map(u => ({
+            ...u,
+            attack_factor: u.attack_factor !== undefined ? u.attack_factor : (u.attack !== undefined ? u.attack : 0)
+        }));
+
         setCombatData({
-            attackerUnits: attackers,
-            defenderUnit: defenders[0], // Assume 1 per area for now
+            attackerUnits: attackerData,
+            defenderUnit: defenderData,
             terrain: area ? area.terrain : 'Clear',
             areaName: areaName
         });
@@ -501,9 +553,11 @@ function App() {
     const handleCombatApply = async (result) => {
         console.log("Applying Combat Result:", result);
 
-        // 1. Call Backend API to finalize state/logs (Optional, done mostly in frontend logic below but better to sync)
+        let apiData = null;
+
+        // 1. Call Backend API to finalize state/logs
         try {
-            await fetch('/api/combat/apply_result', {
+            const res = await fetch('/api/combat/apply_result', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -511,56 +565,100 @@ function App() {
                     attackerUnits: result.attackerUnits,
                     defenderUnit: result.defenderUnit,
                     targetArea: combatData.areaName,
-                    currentMorale: morale
+                    currentMorale: morale,
+                    strategyCasualtyIds: result.strategyCasualtyIds
                 })
             });
+            apiData = await res.json();
+            console.log("API Apply Response:", apiData);
+
         } catch (e) {
             console.error("API Apply Error", e);
         }
 
-        // 2. Update Local State based on Result
-        // Update updated units
+        // Update Local State based on Result
         const updatedIds = new Set();
         const updates = {};
 
-        if (result.attackerUnits) {
-            result.attackerUnits.forEach(u => {
-                updatedIds.add(u.id);
-                updates[u.id] = u;
-            });
-        }
-        if (result.defenderUnit) {
-            updatedIds.add(result.defenderUnit.id);
-            updates[result.defenderUnit.id] = result.defenderUnit;
+        // Use API Data if available (Source of Truth)
+        if (apiData) {
+            if (apiData.updated_attacker_units) {
+                apiData.updated_attacker_units.forEach(u => {
+                    updatedIds.add(u.id);
+                    updates[u.id] = u;
+                });
+            }
+            if (apiData.updated_defender_unit) {
+                updatedIds.add(apiData.updated_defender_unit.id);
+                updates[apiData.updated_defender_unit.id] = apiData.updated_defender_unit;
+            }
+
+            // Strategy Casualties handling (if not already covered in updated units lists)
+            // The API usually returns all updated units, so explicit strategy handling might be redundant if API is correct.
+            // But let's check strategyCasualtyIds just in case they are separate.
+            // backend apply_combat_result returns updated_attacker_units which includes casualties.
+
+            // Update Morale from API
+            if (apiData.new_morale !== undefined) {
+                setMorale(apiData.new_morale);
+            }
+
+            // Update Control from API
+            if (apiData.area_update && apiData.area_update.control === 'US') {
+                setUsControlledAreas(prev => Array.from(new Set([...prev, combatData.areaName])));
+            }
+
+        } else {
+            // Fallback: Manual Logic (Network Error case)
+            console.warn("Using Fallback Logic for Combat Update");
+
+            const isOverrun = result.is_overrun || result.isOverrun;
+            const attackerStatus = isOverrun ? 'fresh' : 'spent';
+
+            if (result.attackerUnits) {
+                result.attackerUnits.forEach(u => {
+                    updatedIds.add(u.id);
+                    updates[u.id] = { ...u, status: attackerStatus };
+                });
+            }
+
+            if (result.defenderUnit) {
+                updatedIds.add(result.defenderUnit.id);
+                // Force reveal if fallback
+                updates[result.defenderUnit.id] = { ...result.defenderUnit, status: 'revealed' };
+            }
+
+            // Strategy Casualties
+            if (result.strategyCasualtyIds && result.strategyCasualtyIds.length > 0) {
+                result.strategyCasualtyIds.forEach(id => {
+                    updatedIds.add(id);
+                    updates[id] = { status: 'out_of_action' };
+                });
+            }
+
+            if (result.resultType === 'Repulse') {
+                setMorale(m => m - 1);
+            }
+            if (result.resultType === 'Success' || result.resultType === 'Overrun') {
+                setUsControlledAreas(prev => Array.from(new Set([...prev, combatData.areaName])));
+            }
         }
 
+        // Apply Updates
         setUnits(prev => prev.map(u => {
             if (updatedIds.has(u.id)) {
-                return { ...u, ...updates[u.id] };
+                // If update is partial, merge. If complete (from API), it replaces.
+                // API sends complete unit objects usually.
+                // We'll merge just to be safe if API sends partials in future, 
+                // but for now apiData units are likely complete.
+                const update = updates[u.id];
+                return { ...u, ...update };
             }
             return u;
         }));
 
-        // Update Morale
-        if (result.currentMorale !== undefined) {
-            // Logic in Modal might pass NEW morale or CURRENT?
-            // My implementation in Modal passed `currentMorale: morale` (old).
-            // But backend returns `new_morale`.
-            // Ideally we use backend response.
-            // But for now, let's just decrement if Repulse?
-            // Wait, `apply_combat_result` API calc is better.
-            // Let's rely on API response if possible.
-            // But here I didn't wait for API response data.
-
-            // Simple fallback: If resultType is Repulse, -1.
-            if (result.resultType === 'Repulse') {
-                setMorale(m => m - 1);
-            }
-        }
-
-        // Update Control
-        if (result.resultType === 'Success' || result.resultType === 'Overrun') {
-            setUsControlledAreas(prev => Array.from(new Set([...prev, combatData.areaName])));
+        if (result.isOverrun || result.is_overrun) {
+            alert("OVERRUN! Attackers remain Fresh and can continue action.");
         }
 
         setShowCombatModal(false);
@@ -869,9 +967,28 @@ function App() {
         if (!clickedUnit) return;
 
         console.log(`Clicked unit: ${id}`, clickedUnit);
+        console.log(`Debug Click: Phase=${currentPhase}, Faction=${clickedUnit.faction}, Status=${clickedUnit.status}, Location=${clickedUnit.location}`);
 
         // --- Click-to-Move Logic (Action Phase & US & Fresh) ---
         if (currentPhase === 'Action' && clickedUnit.faction === 'US' && clickedUnit.status === 'fresh') {
+
+            // Impulse Logic: Active Area Check
+            if (activeArea && activeArea !== clickedUnit.location) {
+                // Clicking a unit OUTSIDE the active area
+                if (window.confirm(`Finish impulse for ${activeArea} and switch to ${clickedUnit.location}?`)) {
+                    handleImpulseCommit(); // Commit previous
+                    // Proceed to select new (will set activeArea below)
+                } else {
+                    return; // Cancel
+                }
+            }
+
+            // Set Active Area if not set
+            if (!activeArea) {
+                setActiveArea(clickedUnit.location);
+                console.log(`Impulse Started: Active Area = ${clickedUnit.location}`);
+            }
+
             // If already selected, deselect? Or maybe rotate stack? 
             // Let's toggle selection.
             if (selectedUnitId === id) {
@@ -900,12 +1017,78 @@ function App() {
                 return true;
             });
 
-            console.log(`Movement Options for ${currentLoc}:`, validOptions);
             setMovementOptions(validOptions);
-            return; // Skip stack rotation if selecting for move
         }
+    };
 
-        // --- Standard Stack Rotation Logic (Fallback) ---
+    const handleImpulseCommit = () => {
+        // Mark all units in the Active Area that are NOT Fresh as Spent?
+        // Wait, logic: Impulse ends -> Units in that area become Spent.
+        // Rule: "When the player declares the Impulse finished... all units in the activated area become Spent."
+        // Exception: Overrun units stay fresh (handled in combat).
+        // Exception: Units that didn't move/attack? Can they stay fresh? 
+        // Rule 8.1: "All units in the Activated Area... are liable to become Spent."
+        // Usually, if you activate an area, you commit.
+        // But if you didn't do anything with a unit, does it become spent?
+        // Simpler implementation: Check units that actually *moved* or *attacked*?
+        // User request: "Finish Area Order -> Next".
+        // Let's mark ALL US units in that area as Spent for now, assuming activation consumes them.
+        // OR: Only mark those that are not explicitly kept fresh?
+
+        if (!activeArea) return;
+
+        setUnits(prev => prev.map(u => {
+            // Target: US units in the Active Area (current location = activeArea implies they didn't move away, OR previous location?)
+            // If they moved, their location is NEW.
+            // But we need to spend units that originated from ActiveArea?
+            // Actually, if they moved, they are in a new area.
+            // If they attacked, they are spent (unless Overrun).
+            // So we mainly need to Spend units that *didn't* act but were part of the activation?
+            // Or maybe just clear the `activeArea` state and let individual actions determine spent status?
+            // Wait, Undo logic relies on "not spent yet".
+            // So moving shouldn't mark spent immediately.
+            // Committing should mark them Spent.
+
+            // Logic: Find units that were in `activeArea` OR are currently `selectedUnitId` (if we track impulse history).
+            // Better: We track `impulseUnits` (IDs that acted).
+            // User: "When button pressed -> Area Order Consummated".
+
+            // Let's set status='spent' for all US units currently located in `activeArea`?
+            // No, if they moved, they are elsewhere.
+            // We need to track which units were involved.
+            // If we don't track, we can just say "Any US unit currently in `activeArea` becomes Spent".
+            // But what about the one that moved to `Area X`? It should also be Spent.
+
+            // REVISED PLAN:
+            // 1. When a unit moves/attacks, add ID to `impulseUnits`.
+            // 2. On Commit, set all `impulseUnits` to 'spent' (unless Overrun flag protected them?).
+            // 3. Reset `activeArea`.
+
+            // BUT: User wants "Trial & Error".
+            // If I move A to B, then Back to A. It shouldn't be spent.
+            // So `impulseUnits` should track "current dirty units".
+
+            // For this iteration, let's keep it simple:
+            // The "Finish" button just resets the lock. `activeArea = null`.
+            // Actual Spent status is applied on "Combat" or "Move"?
+            // User said: "Process previous area's units as Spent (Confirm)".
+
+            // Let's mark `impulseUnits` as spent.
+            // We need to populate `impulseUnits` on Move/Attack.
+            if (impulseUnits.includes(u.id)) {
+                return { ...u, status: 'spent' };
+            }
+            return u;
+        }));
+
+        setActiveArea(null);
+        setImpulseUnits([]);
+        setSelectedUnitId(null);
+        setMovementOptions([]);
+    };
+
+    // --- Standard Stack Rotation Logic (Fallback) ---
+    const rotateStack = (clickedUnit) => {
         // Find units in the same stack (very close proximity)
         const stackThreshold = 60; // Increased threshold
         const stackUnits = units.filter(u =>
@@ -1109,7 +1292,8 @@ function App() {
                         ...u,
                         x: center.x + offsetX,
                         y: center.y + offsetY,
-                        status: 'fresh'
+                        status: 'fresh',
+                        location: areaName
                     });
 
                     areaCounters[areaName] = count + 1;
@@ -1207,17 +1391,6 @@ function App() {
     const tempCounters = {};
     sortedUnits.forEach(u => {
         // Find a representative key for the stack (e.g. rounded coordinates)
-        // Or simply iterate and check proximity?
-        // Let's use simple proximity to "previous" units in sorted list
-        // Since they are sorted by position, stacked units are adjacent in list!
-        // No, because id-based sort is robust, position sort is fluctuating? 
-        // Actually, we specifically want to offset based on "how many units are under me".
-
-        let stackIndex = 0;
-        // Check only against previously processed units?
-        // No, we need to know the *total* count to maybe center it?
-        // But for simply cascading (0, 1, 2), we can just count how many "before me" are close.
-
         // This is O(N^2) in worst case, but N=50 is tiny.
         const nearby = sortedUnits.filter(other =>
             other.id !== u.id &&
@@ -1225,13 +1398,8 @@ function App() {
             Math.abs(other.y - u.y) < STACK_THRESHOLD
         );
 
-        // However, we want a stable index.
-        // If we simply count "how many nearby units have logic index < my logic index"?
-        // Let's use the index in the `sortedUnits` array as the tiebreaker.
-
+        // Use ID string comparison for stability
         const myRank = nearby.filter(other => {
-            // Compare identifying correlation (e.g. ID string or just original index)
-            // Let's use ID string comparison for stability
             return other.id < u.id;
         }).length;
 
@@ -1306,6 +1474,27 @@ function App() {
                         <div style={{ marginTop: '5px', padding: '10px', background: '#333', borderRadius: '4px' }}>
                             <div style={{ fontSize: '1.2rem', color: '#00ccff', fontWeight: 'bold' }}>{selectedArea.name}</div>
                             <div style={{ color: '#aaa', marginTop: '5px' }}>Terrain: {selectedArea.terrain}</div>
+
+                            {/* Adjacency Info */}
+                            <div style={{ marginTop: '10px', borderTop: '1px solid #555', paddingTop: '5px' }}>
+                                <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '3px' }}>Adjacent To:</div>
+                                <div style={{ fontSize: '0.85rem', color: '#eee', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {adjacencyData[selectedArea.name] && adjacencyData[selectedArea.name].length > 0 ? (
+                                        adjacencyData[selectedArea.name].map(adj => (
+                                            <span key={adj} style={{
+                                                background: '#444',
+                                                padding: '2px 5px',
+                                                borderRadius: '3px',
+                                                border: '1px solid #555'
+                                            }}>
+                                                {adj}
+                                            </span>
+                                        ))
+                                    ) : (
+                                        <span style={{ color: '#777', fontStyle: 'italic' }}>None</span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         <div style={{ color: '#777', fontStyle: 'italic', marginTop: '5px' }}>Click an area on the map...</div>
@@ -1441,18 +1630,25 @@ function App() {
                         gap: '8px',
                         boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
                     }}>
-                        {hoveredStack.units.map(u => (
-                            <div key={u.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <img
-                                    src={`/images/${(u.status === 'spent' && u.backImage) ? u.backImage : u.frontImage}`}
-                                    alt={u.id}
-                                    style={{ width: '100px', height: '100px', borderRadius: '4px' }}
-                                />
-                                <div style={{ color: '#eee', fontSize: '0.75rem', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {u.id}
+                        {hoveredStack.units.map(stackUnit => {
+                            const u = units.find(live => live.id === stackUnit.id) || stackUnit;
+
+                            // Filter out removed units from the tooltip immediately
+                            if (['out_of_action', 'eliminated', 'future'].includes(u.status)) return null;
+
+                            return (
+                                <div key={u.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <img
+                                        src={`/images/${((u.status === 'spent' || u.status === 'revealed') && u.backImage) ? u.backImage : u.frontImage}`}
+                                        alt={u.id}
+                                        style={{ width: '100px', height: '100px', borderRadius: '4px' }}
+                                    />
+                                    <div style={{ color: '#eee', fontSize: '0.75rem', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {u.status === 'hidden' ? 'Hidden' : u.name}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 
@@ -1526,91 +1722,144 @@ function App() {
                                 />
                             );
                         })}
-                        {movementOptions.map(areaName => {
-                            const area = mapData.find(a => a.name === areaName);
-                            if (!area) return null;
-                            const center = getCentroid(area.points);
-                            return (
-                                <Group
-                                    key={`move-${areaName}`}
-                                    onClick={() => handleMoveSelect(areaName)}
-                                    onTap={() => handleMoveSelect(areaName)}
-                                    onMouseEnter={() => document.body.style.cursor = 'pointer'}
-                                    onMouseLeave={() => document.body.style.cursor = 'default'}
-                                >
-                                    <Circle
-                                        x={center.x}
-                                        y={center.y}
-                                        radius={30}
-                                        fill="rgba(0, 255, 0, 0.4)"
-                                        stroke="lime"
-                                        strokeWidth={2}
-                                    />
-                                    <Text
-                                        x={center.x - 20}
-                                        y={center.y - 6}
-                                        text="MOVE"
-                                        fontSize={12}
-                                        fill="white"
-                                        fontStyle="bold"
-                                        width={40}
-                                        align="center"
-                                        listening={false}
-                                    />
-                                </Group>
-                            );
-                        })}
-                        {mapData.map((area, i) => (
-                            <Line
-                                key={i}
-                                points={area.points}
-                                fill={
-                                    validRecoveryAreas.includes(area.name) ? 'rgba(255, 215, 0, 0.4)' :
-                                        (usControlledAreas.includes(area.name) ? 'rgba(0, 100, 255, 0.15)' :
-                                            (selectedArea?.name === area.name ? 'rgba(255, 0, 0, 0.4)' :
-                                                (hoveredArea === area.name ? 'rgba(255, 255, 255, 0.2)' : 'transparent')))
-                                }
-                                stroke={
-                                    validRecoveryAreas.includes(area.name) ? 'rgba(255, 215, 0, 0.8)' :
-                                        (usControlledAreas.includes(area.name) ? 'rgba(0, 150, 255, 0.5)' :
-                                            (selectedArea?.name === area.name ? 'red' : 'rgba(255,255,0,0.3)'))
-                                }
-                                strokeWidth={3}
-                                closed
-                                onMouseEnter={() => {
-                                    document.body.style.cursor = 'pointer';
-                                    setHoveredArea(area.name);
-                                }}
-                                onMouseLeave={() => {
-                                    document.body.style.cursor = 'default';
-                                    setHoveredArea(null);
-                                }}
-                                onClick={() => {
-                                    /* if (currentPhase === 'Action') ... */
-                                    setSelectedArea(area);
-                                }}
 
-                                onContextMenu={(e) => handleAreaContextMenu(e, area.name)}
-                            />
-                        ))}
+
+                        {
+                            mapData.map((area, i) => {
+                                // Visualization Logic
+                                let fill = "rgba(0,0,0,0)";
+                                let stroke = "rgba(255,255,255,0.3)";
+                                let strokeWidth = 2;
+
+                                // Highlight selected area (Yellow)
+                                if (selectedArea && selectedArea.name === area.name) {
+                                    fill = "rgba(255, 255, 0, 0.3)"; // Yellow tint
+                                    stroke = "yellow";
+                                    strokeWidth = 5;
+                                }
+
+
+
+                                // Highlight Click-to-Move Options (Green Circles/Pulse - Handled by Overlays or here?)
+                                // If we want the *whole area* to light up for movement:
+                                if (movementOptions.includes(area.name)) {
+                                    fill = "rgba(0, 255, 0, 0.4)";
+                                    stroke = "#00ff00";
+                                    strokeWidth = 4;
+                                }
+                                // Highlight Valid Recovery Areas (Blue)
+                                if (validRecoveryAreas.includes(area.name)) {
+                                    fill = "rgba(0, 100, 255, 0.3)";
+                                    stroke = "cyan";
+                                }
+                                // Highlight Contested Areas (Red flashing or static)
+                                if (contestedAreas.includes(area.name)) {
+                                    stroke = "red";
+                                    strokeWidth = 4;
+                                    // fill = "rgba(255, 0, 0, 0.2)"; // Optional
+                                }
+
+                                return (
+                                    <Line
+                                        key={i}
+                                        points={area.points}
+                                        fill={fill}
+                                        stroke={stroke}
+                                        strokeWidth={strokeWidth}
+                                        closed={true}
+                                        onMouseEnter={() => {
+                                            setHoveredArea(area);
+                                            document.body.style.cursor = 'pointer';
+                                        }}
+                                        onMouseLeave={() => {
+                                            setHoveredArea(null);
+                                            document.body.style.cursor = 'default';
+                                        }}
+                                        onClick={(e) => {
+                                            // Area Click Logic
+                                            console.log(`Clicked Area: ${area.name} (${area.terrain})`);
+
+                                            // 1. Selection Logic (for Debug/Info)
+                                            setSelectedArea(area);
+
+                                            // 2. Context Menu
+                                            if (e.evt.button === 2) {
+                                                handleAreaContextMenu(e, area.name);
+                                                return;
+                                            }
+
+                                            // 3. Movement Logic
+                                            if (selectedUnitId && movementOptions.includes(area.name)) {
+                                                handleMoveSelect(area.name);
+                                            }
+                                            // 4. Combat Logic
+                                            else if (currentPhase === 'Combat') {
+                                                handleCombatInitiation(area.name);
+                                            }
+                                        }}
+                                        // Disable listening if not interactive to save perf? No, need hover.
+                                        listening={true}
+                                    />
+                                );
+                            })
+                        }
 
                         {/* Units Render Loop */}
-                        {sortedUnits.map((unit) => (
-                            <UnitCounter
-                                key={unit.id}
-                                unit={unit}
-                                x={unit.x}
-                                y={unit.y}
-                                indexInStack={stackMap[unit.id] || 0}
-                                isSelected={unit.id === selectedUnitId}
-                                onDragStart={handleUnitDragStart}
-                                onDragEnd={handleUnitDragEnd}
-                                onClick={handleUnitClick}
-                                onDblClick={handleUnitDblClick}
-                                onHover={handleUnitHover}
-                                onContextMenu={handleUnitContextMenu}
-                            />
-                        ))}
+                        {
+                            sortedUnits.map((unit) => (
+                                <UnitCounter
+                                    key={unit.id}
+                                    unit={unit}
+                                    x={unit.x}
+                                    y={unit.y}
+                                    indexInStack={stackMap[unit.id] || 0}
+                                    isSelected={unit.id === selectedUnitId}
+                                    onDragStart={handleUnitDragStart}
+                                    onDragEnd={handleUnitDragEnd}
+                                    onClick={handleUnitClick}
+                                    onDblClick={handleUnitDblClick}
+                                    onHover={handleUnitHover}
+                                    onContextMenu={handleUnitContextMenu}
+                                />
+                            ))
+                        }
+                        {/* Movement Options (Top Layer) */}
+                        {
+                            movementOptions.map(areaName => {
+                                const area = mapData.find(a => a.name === areaName);
+                                if (!area) return null;
+                                const center = getCentroid(area.points);
+                                return (
+                                    <Group
+                                        key={`move-${areaName}`}
+                                        onClick={() => handleMoveSelect(areaName)}
+                                        onTap={() => handleMoveSelect(areaName)}
+                                        onMouseEnter={() => document.body.style.cursor = 'pointer'}
+                                        onMouseLeave={() => document.body.style.cursor = 'default'}
+                                    >
+                                        <Circle
+                                            x={center.x}
+                                            y={center.y}
+                                            radius={30}
+                                            fill="rgba(0, 255, 0, 0.4)"
+                                            stroke="lime"
+                                            strokeWidth={2}
+                                        />
+                                        <Text
+                                            x={center.x - 20}
+                                            y={center.y - 6}
+                                            text="MOVE"
+                                            fontSize={12}
+                                            fill="white"
+                                            fontStyle="bold"
+                                            width={40}
+                                            align="center"
+                                            listening={false}
+                                        />
+                                    </Group>
+                                );
+                            })
+                        }
                     </Layer>
                 </Stage>
             </div>
@@ -1815,6 +2064,7 @@ function App() {
                     <CombatModal
                         onClose={() => setShowCombatModal(false)}
                         onApply={handleCombatApply}
+                        onReveal={handleUnitReveal}
                         onStrategyCasualty={handleStrategyCasualty}
                         attackerUnits={combatData.attackerUnits}
                         defenderUnit={combatData.defenderUnit}

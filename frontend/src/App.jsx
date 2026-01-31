@@ -1879,19 +1879,19 @@ function App() {
                 overflowY: 'auto',
                 boxSizing: 'border-box'
             }}>
-                <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Resources</h3>
+                <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>リソース</h3>
 
                 <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
 
                     {/* Turn (Static for now) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>Turn</div>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>ターン</div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>1</div>
                     </div>
 
                     {/* Supply (Interactive) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Supply</div>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>米軍補給</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4caf50' }}>{supplyPoints}</div>
                         </div>
@@ -1899,25 +1899,25 @@ function App() {
 
                     {/* Morale (Static) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Morale</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2196f3' }}>19 (Strong)</div>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>米軍士気</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2196f3' }}>19 (強固)</div>
                     </div>
 
                     {/* Control (Dynamic) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>US Control</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControlledAreas.length} (Goal: 34)</div>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>米軍支配</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControlledAreas.length} (目標: 34)</div>
                     </div>
                 </div>
 
                 {/* Supply Actions */}
                 <div style={{ marginBottom: '20px' }}>
-                    <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: '#8bc34a' }}>Supply Actions</h3>
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: '#8bc34a' }}>補給アクション</h3>
                     <div style={{ padding: '10px', background: '#333', borderRadius: '4px', border: '1px solid #555' }}>
                         {currentPhase === 'Supply' && !supplyRolled && (
                             <div style={{ marginBottom: '10px' }}>
                                 <button onClick={handleSupplyRoll} style={{ width: '100%', background: '#ff9800', color: 'white', padding: '8px', border: 'none', cursor: 'pointer', borderRadius: '4px' }}>
-                                    Roll Supply (4d6)
+                                    補給ダイス (4d6)
                                 </button>
                             </div>
                         )}
@@ -1925,7 +1925,7 @@ function App() {
                         {currentPhase === 'Supply' && supplyRolled && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                 <div style={{ fontSize: '0.8rem', color: '#ccc', fontStyle: 'italic' }}>
-                                    Spend supply points to buy support, recover units, or boost morale.
+                                    補給ポイントを消費して支援を購入、部隊を回復、または士気を向上させます。
                                 </div>
 
                                 <button
@@ -1941,7 +1941,7 @@ function App() {
                                         borderRadius: '4px'
                                     }}
                                 >
-                                    +1 Morale ($3) {morale >= 19 ? '(Max)' : ''}
+                                    +1 士気 ($3) {morale >= 19 ? '(最大)' : ''}
                                 </button>
 
                                 <hr style={{ borderColor: '#555', width: '100%', margin: '5px 0' }} />
@@ -1959,7 +1959,7 @@ function App() {
                                         fontWeight: 'bold'
                                     }}
                                 >
-                                    End Supply Phase (Start Action) &gt;
+                                    補給フェーズ終了 (アクション開始) &gt;
                                 </button>
                             </div>
                         )}
@@ -1967,13 +1967,13 @@ function App() {
                         {currentPhase === 'Action' && (
                             <div style={{ paddingTop: '10px', borderTop: '1px solid #555', marginTop: '10px' }}>
                                 <div style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '10px', fontStyle: 'italic' }}>
-                                    Move units or Right-Click areas to Resolve Combat.
+                                    部隊を移動するか、エリアを右クリックして戦闘を解決します。
                                 </div>
                                 <button
                                     onClick={handleEndTurn}
                                     style={{
                                         width: '100%',
-                                        background: '#f44336', // Red
+                                        background: '#e91e63',
                                         color: 'white',
                                         padding: '12px',
                                         border: 'none',
@@ -1982,7 +1982,7 @@ function App() {
                                         fontWeight: 'bold'
                                     }}
                                 >
-                                    End Action Phase (Finish Turn) &gt;
+                                    アクションフェーズ終了 (ターン終了) &gt;
                                 </button>
                             </div>
                         )}
@@ -1990,13 +1990,13 @@ function App() {
 
                         {currentPhase !== 'Supply' && (
                             <div style={{ fontSize: '0.8rem', color: '#777' }}>
-                                Supply actions available in Supply Phase.
+                                補給アクションは補給フェーズで利用可能です。
                             </div>
                         )}
                     </div>
                 </div >
 
-                <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Support Units</h3>
+                <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>支援部隊</h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
                     {Object.keys(supportUnits).map(key => {
@@ -2011,9 +2011,9 @@ function App() {
                                 <div>
                                     <div style={{ fontWeight: 'bold', color: '#ddd' }}>{s.name}</div>
                                     <div style={{ fontSize: '0.75rem', color: '#aaa' }}>
-                                        Avail: <span style={{ color: '#fff' }}>{s.available}</span> / Used: <span style={{ color: '#fa8' }}>{s.used}</span> (Max: {s.max})
+                                        利用可能: <span style={{ color: '#fff' }}>{s.available}</span> / 使用済み: <span style={{ color: '#fa8' }}>{s.used}</span> (最大: {s.max})
                                     </div>
-                                    <div style={{ fontSize: '0.75rem', color: '#aaa' }}>Cost: {s.cost}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#aaa' }}>コスト: {s.cost}</div>
                                 </div>
                                 <div>
                                     <button
@@ -2029,7 +2029,7 @@ function App() {
                                             borderRadius: '2px'
                                         }}
                                     >
-                                        Buy
+                                        購入
                                     </button>
                                 </div>
                             </div>
@@ -2037,10 +2037,10 @@ function App() {
                     })}
                 </div>
 
-                <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>Out of Action</h3>
+                <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid #555', paddingBottom: '5px', color: '#ff9900' }}>行動不能 (OOA)</h3>
                 <div style={{ minHeight: '60px', background: '#2a2a2a', padding: '10px', borderRadius: '4px', border: '1px dashed #555' }}>
                     {units.filter(u => u.status === 'out_of_action').length === 0 ? (
-                        <div style={{ color: '#777', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>No units lost</div>
+                        <div style={{ color: '#777', fontStyle: 'italic', textAlign: 'center', padding: '10px' }}>損失なし</div>
                     ) : (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                             {units.filter(u => u.status === 'out_of_action').map(u => (
@@ -2055,7 +2055,7 @@ function App() {
                                     }}
                                     onMouseEnter={() => handleOOAHover(u, true)}
                                     onMouseLeave={() => handleOOAHover(u, false)}
-                                    title={`${u.name}\nRight-click to Recover`}
+                                    title={`${u.name}\n右クリックで回復`}
                                 />
                             ))}
                         </div>
@@ -2103,7 +2103,7 @@ function App() {
                                 onClick={() => handleRecoverUnit(contextMenu.unitId)}
                                 style={{ display: 'block', width: '100%', padding: '8px', background: '#4caf50', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
                             >
-                                Recover (2 Supply)
+                                Recover (補給 2)
                             </button>
                         )}
 
@@ -2124,7 +2124,7 @@ function App() {
                                                 }}
                                                 style={{ display: 'block', width: '100%', padding: '8px', marginBottom: '5px', background: '#ff9800', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px', fontWeight: 'bold' }}
                                             >
-                                                ⚔️ Resolve Combat
+                                                ⚔️ 戦闘解決
                                             </button>
                                         );
                                     }
@@ -2135,7 +2135,7 @@ function App() {
                                     onClick={() => handleToggleControl(contextMenu.areaName)}
                                     style={{ display: 'block', width: '100%', padding: '8px', background: usControlledAreas.includes(contextMenu.areaName) ? '#d32f2f' : '#2196f3', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
                                 >
-                                    {usControlledAreas.includes(contextMenu.areaName) ? 'JP Recapture' : 'US Take Control'}
+                                    {usControlledAreas.includes(contextMenu.areaName) ? '日本軍支配へ' : '米軍支配へ'}
                                 </button>
                             </>
                         )}
@@ -2158,7 +2158,7 @@ function App() {
                                                     }}
                                                     style={{ display: 'block', width: '100%', padding: '8px', marginBottom: '5px', background: '#ff9800', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px', fontWeight: 'bold' }}
                                                 >
-                                                    ⚔️ Resolve Combat
+                                                    ⚔️ 戦闘解決
                                                 </button>
                                             );
                                         }
@@ -2170,7 +2170,7 @@ function App() {
                                     onClick={() => handleRemoveUnit(contextMenu.unitId)}
                                     style={{ display: 'block', width: '100%', padding: '8px', background: '#f44336', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
                                 >
-                                    {units.find(u => u.id === contextMenu.unitId)?.faction === 'JP' ? 'Eliminate Unit' : 'Send to Out of Action'}
+                                    {units.find(u => u.id === contextMenu.unitId)?.faction === 'JP' ? '部隊除去' : '戦線離脱 (OOA) へ'}
                                 </button>
                             </>
                         )}

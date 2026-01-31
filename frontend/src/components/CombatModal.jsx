@@ -235,18 +235,40 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         onClose();
     };
 
+    // Display helpers
+    const getStepLabel = (s) => {
+        switch (s) {
+            case 'CONTACT': return '接敵 (Contact)';
+            case 'STRATEGY': return '戦略 (Strategy)';
+            case 'SETUP': return '準備 (Setup)';
+            case 'RESOLUTION': return '解決 (Resolution)';
+            case 'RESULT': return '結果 (Result)';
+            default: return s;
+        }
+    };
+
+    const getResultLabel = (r) => {
+        switch (r) {
+            case 'Success': return '成功 (JP除去)';
+            case 'Repulse': return '撃退 (米軍損害)';
+            case 'Stalemate': return '膠着 (痛み分け)';
+            case 'Overrun': return 'オーバーラン (完全勝利)';
+            default: return r;
+        }
+    };
+
     return (
         <div className="combat-overlay">
             <div className="combat-window">
                 <div className="combat-header">
-                    <div className="combat-title">Combat: {step}</div>
+                    <div className="combat-title">戦闘フェーズ: {getStepLabel(step)}</div>
                     <button className="combat-close" onClick={onClose}>×</button>
                 </div>
 
                 <div className="combat-body">
                     {/* LEFT: ATTACKER */}
                     <div className="combat-section attacker-section">
-                        <div className="section-title">US Forces</div>
+                        <div className="section-title">米軍 (US Forces)</div>
                         <div className="unit-list">
                             {activeAttackers.map(u => (
                                 <div
@@ -254,15 +276,6 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                                     className={`unit-card ${u.id === selectedLeadId ? 'lead' : ''} ${!participatingIds.has(u.id) ? 'inactive' : ''}`}
                                     onClick={() => {
                                         if (step === 'RESULT') return;
-                                        // Click logic: 
-                                        // 1. If clicking lead, do nothing (Lead must participate).
-                                        // 2. If clicking others, toggle participation.
-                                        // 3. To change lead, use a separate action? Or double click?
-                                        // Spec says: "Who participates". Lead must be one of them.
-                                        // Let's assume clicking makes it Lead if active, or toggles participation?
-                                        // Better UI: Checkbox for participation. Body click for Lead.
-                                        // Let's implement body click -> Set Lead (if active). 
-                                        // Add a small checkbox div for participation.
                                         if (participatingIds.has(u.id)) setSelectedLeadId(u.id);
                                     }}
                                     style={{ cursor: step !== 'RESULT' ? 'pointer' : 'default', opacity: participatingIds.has(u.id) ? 1 : 0.5 }}
@@ -290,7 +303,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                                     </div>
                                     <div className="unit-info">
                                         <div className="unit-name">{u.name}</div>
-                                        <div className="unit-stats">AF: {u.attack_factor} {u.id === selectedLeadId ? '(Lead)' : ''}</div>
+                                        <div className="unit-stats">攻撃: {u.attack_factor} {u.id === selectedLeadId ? '(先導)' : ''}</div>
                                     </div>
                                 </div>
                             ))}
@@ -298,26 +311,26 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
 
                         {(step === 'SETUP' || step === 'RESULT') && (
                             <>
-                                <div className="section-title">Support (Max {participatingIds.size})</div>
+                                <div className="section-title">支援 (最大 {participatingIds.size})</div>
                                 {/* Mixed Formation Warning */}
                                 {calculatedStats.logs.some(l => l.includes("Parent Formation Penalty")) && (
                                     <div style={{ color: "orange", fontSize: "0.8rem", marginBottom: "4px" }}>
-                                        ⚠️ Mixed Formation Penalty Active (-1)
+                                        ⚠️ 混合部隊ペナルティ (-1)
                                     </div>
                                 )}
                                 <div className="modifiers-grid">
                                     <button className={`mod-btn ${support.artillery > 0 ? 'active' : ''}`} onClick={() => handleSupportCycle('artillery')}>
-                                        Arty x{support.artillery}
+                                        砲兵 x{support.artillery}
                                     </button>
                                     <button className={`mod-btn ${support.engineer > 0 ? 'active' : ''}`} onClick={() => handleSupportCycle('engineer')}>
-                                        Eng x{support.engineer}
+                                        工兵 x{support.engineer}
                                     </button>
                                     <button className={`mod-btn ${support.air_support ? 'active' : ''}`} onClick={() => handleSupportCycle('air_support')}>
-                                        Air {support.air_support ? 'ON' : 'OFF'}
+                                        航空 {support.air_support ? 'ON' : 'OFF'}
                                     </button>
                                 </div>
                                 <div className="stats-display">
-                                    <div className="stat-label">Total AV</div>
+                                    <div className="stat-label">総攻撃力 (AV)</div>
                                     <div className="stat-value">{calculatedStats.av}</div>
                                 </div>
                             </>
@@ -328,28 +341,30 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                     <div className="action-section">
                         {step === 'CONTACT' && (
                             <button className="roll-btn" onClick={handleReveal} style={{ fontSize: '0.9rem', width: 120, height: 60, borderRadius: 8 }}>
-                                REVEAL
+                                敵軍公開<br />(REVEAL)
                             </button>
                         )}
                         {step === 'STRATEGY' && (
-                            <div style={{ color: 'yellow' }}>Enemy Strategy...</div>
+                            <div style={{ color: 'yellow' }}>敵軍戦略発動中...</div>
                         )}
                         {step === 'SETUP' && (
                             <button className="roll-btn" onClick={handleRoll} disabled={isRolling}>
-                                {isRolling ? '...' : 'ROLL'}
+                                {isRolling ? '...' : 'ダイスロール'}
                             </button>
                         )}
                         {step === 'RESULT' && (
                             <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'yellow' }}>{combatResult?.resultTypeActual}</div>
-                                <button className="mod-btn active" onClick={handleApply} style={{ marginTop: 20, width: 100 }}>APPLY</button>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'yellow' }}>
+                                    {getResultLabel(combatResult?.resultTypeActual)}
+                                </div>
+                                <button className="mod-btn active" onClick={handleApply} style={{ marginTop: 20, width: 100 }}>結果適用</button>
                             </div>
                         )}
                     </div>
 
                     {/* RIGHT: DEFENDER */}
                     <div className="combat-section defender-section">
-                        <div className="section-title">JP Forces</div>
+                        <div className="section-title">日本軍 (JP Forces)</div>
                         <div className="terrain-badge">{terrain}</div>
 
                         <div className="unit-list">
@@ -357,7 +372,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                                 <div className="unit-card" style={{ opacity: 0.6 }}>
                                     <div className="unit-card-icon">?</div>
                                     <div className="unit-info">
-                                        <div className="unit-name">Hidden Unit</div>
+                                        <div className="unit-name">未確認部隊</div>
                                         <div className="unit-stats">???</div>
                                     </div>
                                 </div>
@@ -366,7 +381,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                                     <div className="unit-card-icon" style={{ background: '#c53030' }}>JP</div>
                                     <div className="unit-info">
                                         <div className="unit-name">{defenderUnit.name}</div>
-                                        <div className="unit-stats">DF: {defenderUnit.strength} / {defenderUnit.unitClass}</div>
+                                        <div className="unit-stats">防御: {defenderUnit.strength} / {defenderUnit.unitClass}</div>
                                     </div>
                                 </div>
                             )}
@@ -374,9 +389,9 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
 
                         {(step === 'SETUP' || step === 'RESULT') && (
                             <>
-                                <div className="section-title">JP Stats</div>
+                                <div className="section-title">防御力</div>
                                 <div className="stats-display">
-                                    <div className="stat-label">Total DV</div>
+                                    <div className="stat-label">総防御力 (DV)</div>
                                     <div className="stat-value">{calculatedStats.dv}</div>
                                 </div>
                             </>
@@ -385,7 +400,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                 </div>
 
                 <div className="combat-footer">
-                    <div className="section-title">Logs</div>
+                    <div className="section-title">ログ (Logs)</div>
                     <div style={{ maxHeight: 100, overflowY: 'auto' }}>
                         {step === 'SETUP' && calculatedStats.logs && calculatedStats.logs.map((l, i) => (
                             <div key={'c' + i} className="log-message info" style={{ color: '#aaa', fontStyle: 'italic' }}>• {l}</div>

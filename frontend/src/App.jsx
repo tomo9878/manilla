@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Stage, Layer, Image as KonvaImage, Line, Text, Group, Rect, Circle } from 'react-konva';
 import Konva from 'konva';
 import useImage from 'use-image';
@@ -732,6 +732,73 @@ function App() {
         setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'out_of_action' } : u));
 
         setContextMenu(null);
+    };
+
+
+    // --- Save / Load Logic ---
+    const fileInputRef = useRef(null);
+
+    const handleSaveGame = () => {
+        const gameState = {
+            turn,
+            currentPhase,
+            morale,
+            supplyRolled,
+            hasBeenShaken,
+            usControlledAreas,
+            units,
+            supportUnits,
+            currentEvent,
+            lastEvent,
+            contestedAreas,
+            bloodyStreetsQueue,
+            timestamp: new Date().toISOString()
+        };
+
+        const blob = new Blob([JSON.stringify(gameState, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `manila_save_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleLoadGame = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const state = JSON.parse(e.target.result);
+
+                // Restore State
+                if (state.turn !== undefined) setTurn(state.turn);
+                if (state.currentPhase !== undefined) setCurrentPhase(state.currentPhase);
+                if (state.morale !== undefined) setMorale(state.morale);
+                if (state.supplyRolled !== undefined) setSupplyRolled(state.supplyRolled);
+                if (state.hasBeenShaken !== undefined) setHasBeenShaken(state.hasBeenShaken);
+                if (state.usControlledAreas) setUsControlledAreas(state.usControlledAreas);
+                if (state.units) setUnits(state.units);
+                if (state.supportUnits) setSupportUnits(state.supportUnits);
+                if (state.currentEvent !== undefined) setCurrentEvent(state.currentEvent);
+                if (state.lastEvent !== undefined) setLastEvent(state.lastEvent);
+                if (state.contestedAreas) setContestedAreas(state.contestedAreas);
+                if (state.bloodyStreetsQueue) setBloodyStreetsQueue(state.bloodyStreetsQueue);
+
+                alert("ゲームをロードしました！");
+            } catch (err) {
+                console.error("Load Game Error:", err);
+                alert("セーブデータの読み込みに失敗しました。");
+            }
+        };
+        reader.readAsText(file);
+
+        // Reset input
+        event.target.value = '';
     };
 
     const handleUnitContextMenu = (e, unitId) => {
@@ -1602,6 +1669,26 @@ function App() {
                     >
                         End Phase
                     </button>
+                </div>
+
+                {/* System / Save & Load */}
+                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #7f8c8d' }}>
+                    <div style={{ fontSize: '0.9rem', color: '#95a5a6', marginBottom: '5px' }}>システム (System)</div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={handleSaveGame} style={{ flex: 1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', borderRadius: '4px', cursor: 'pointer' }}>
+                            セーブ
+                        </button>
+                        <button onClick={() => fileInputRef.current.click()} style={{ flex: 1, padding: '8px', background: '#34495e', color: 'white', border: '1px solid #7f8c8d', borderRadius: '4px', cursor: 'pointer' }}>
+                            ロード
+                        </button>
+                    </div>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        onChange={handleLoadGame}
+                        accept=".json"
+                    />
                 </div>
             </div>
 

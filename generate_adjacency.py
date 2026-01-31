@@ -35,7 +35,7 @@ def are_areas_adjacent(points_a, points_b, threshold=30.0, min_shared_points=1):
 
 def main():
     map_path = 'frontend/src/map_data.json'
-    output_path = 'backend/adjacency.json'
+    output_path = 'frontend/src/adjacency.json'
     
     with open(map_path, 'r', encoding='utf-8') as f:
         areas = json.load(f)

@@ -257,14 +257,14 @@ function App() {
 
             if (data.logs.length > 0) {
                 console.log("Event Phase Logs:", data.logs);
-                setTimeout(() => alert("Event Result:\n" + data.event.name + "\n\n" + data.logs.join('\n')), 200);
+                setTimeout(() => alert("イベント結果:\n" + data.event.name + "\n\n" + data.logs.join('\n')), 200);
             }
 
             // Ready to proceed to next phase (Supply) manually
 
         } catch (e) {
             console.error("Event API Error", e);
-            alert("Error processing Event Phase.");
+            alert("イベントフェーズ処理エラー");
         }
     };
 
@@ -345,7 +345,7 @@ function App() {
             // Log messages to user
             console.log("Dawn Phase Results:", data.logs);
             if (data.logs.length > 0) {
-                alert("Dawn Phase Report:\n" + data.logs.join('\n'));
+                alert("夜明けフェーズ報告:\n" + data.logs.join('\n'));
             }
 
             // Update State
@@ -354,7 +354,7 @@ function App() {
             setCurrentPhase('Event'); // Advance to Event Phase
         } catch (e) {
             console.error(e);
-            alert("Error processing Dawn Phase. Is backend running?");
+            alert("夜明けフェーズ処理エラー。バックエンドを確認してください。");
         }
     };
 
@@ -373,11 +373,16 @@ function App() {
             setSupplyRolled(true);
 
             if (data.logs.length > 0) {
-                alert("Supply Roll Results:\n" + data.logs.join('\n'));
+                const translatedLogs = data.logs.map(log =>
+                    log.replace('Supply Roll Results:', '補給ダイス結果:') // Assuming exact match logic isn't strictly needed for simple replace
+                        .replace('Supply Roll', '補給ダイス')
+                        .replace('Supply Points', '補給ポイント')
+                );
+                alert("補給結果:\n" + translatedLogs.join('\n'));
             }
         } catch (e) {
             console.error("Supply Roll Error", e);
-            alert("Error rolling for supply.");
+            alert("補給ダイスの処理に失敗しました。");
         }
     };
 
@@ -1569,11 +1574,11 @@ function App() {
                 </div>
 
                 <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: '1.5rem' }}>
-                    <strong>Controls:</strong><br />
-                    • Wheel to Zoom<br />
-                    • Drag to Pan<br />
-                    • Click Stack to Rotate<br />
-                    • Double-click Unit to Flip
+                    <strong>操作方法:</strong><br />
+                    • ホイール: ズーム<br />
+                    • ドラッグ: マップ移動<br />
+                    • スタッククリック: ユニット切替<br />
+                    • ダブルクリック: 裏返す
                 </div>
 
                 {/* Action Buttons */}

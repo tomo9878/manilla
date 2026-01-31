@@ -181,7 +181,8 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                     terrainMod: 0,
                     strategyMod: 0,
                     isElite: defenderUnit.unitClass === 'Elite',
-                    hasAirSupport: support.air_support
+                    hasAirSupport: support.air_support,
+                    terrainType: terrain
                 })
             });
             const data = await response.json();
@@ -386,6 +387,9 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                 <div className="combat-footer">
                     <div className="section-title">Logs</div>
                     <div style={{ maxHeight: 100, overflowY: 'auto' }}>
+                        {step === 'SETUP' && calculatedStats.logs && calculatedStats.logs.map((l, i) => (
+                            <div key={'c' + i} className="log-message info" style={{ color: '#aaa', fontStyle: 'italic' }}>• {l}</div>
+                        ))}
                         {combatLogs.map((l, i) => <div key={i} className={`log-message ${l.type}`}>{l.msg}</div>)}
                         {combatResult?.logs.map((l, i) => <div key={'r' + i} className="log-message result">{l}</div>)}
                     </div>

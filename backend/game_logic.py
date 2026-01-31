@@ -562,8 +562,16 @@ class GameLogic:
         has_support = total_support > 0
         
         if has_tank and has_inf and has_support:
-            av += 1
-            logs.append("AV Combined Arms Bonus: +1")
+            # Rubble Rule (11.4.1): In Urban/Fort, Combined Arms requires Engineer support.
+            if terrain_type in ['Urban', 'Fort']:
+                 if eng_count > 0:
+                     av += 1
+                     logs.append("AV Combined Arms Bonus (Rubble/Eng): +1")
+                 else:
+                     logs.append("No Combined Arms Bonus: Urban/Fort requires Engineer support.")
+            else:
+                 av += 1
+                 logs.append("AV Combined Arms Bonus: +1")
             
         # Strong Morale
         if morale >= 10:
@@ -639,10 +647,10 @@ class GameLogic:
             "logs": logs
         }
 
-    def process_combat(self, attack_val, defense_val, terrain_mod, strategy_mod, is_night_attack=False, is_elite=False, has_air_support=False):
+    def process_combat(self, attack_val, defense_val, terrain_mod, strategy_mod, is_night_attack=False, is_elite=False, has_air_support=False, terrain_type=None):
         """
         Executes Combat Resolution (AT vs DT).
-        Updated to handle Elite dice (3d6 drop low) and Air Support (DV -1d6).
+        Updated to handle Elite dice (3d6 drop low), Air Support (DV -1d6), and Fort Overrun exception.
         """
         logs = []
         
@@ -705,8 +713,13 @@ class GameLogic:
         
         if is_success:
             if diff > defense_val: # Compare against Base DF
-                is_overrun = True
-                logs.append(f"  Result: OVERRUN! (Diff {diff} > Base DF {defense_val})")
+                # Rule 11.7: Overrun not possible in Fort areas
+                if terrain_type == 'Fort':
+                    is_overrun = False
+                    logs.append(f"  Result: Success (JP Eliminated) - Overrun prevented by Fort terrain (Rule 11.7)")
+                else:
+                    is_overrun = True
+                    logs.append(f"  Result: OVERRUN! (Diff {diff} > Base DF {defense_val})")
             else:
                 logs.append(f"  Result: Success (JP Eliminated)")
         else:

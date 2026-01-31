@@ -1731,6 +1731,11 @@ function App() {
                                 let stroke = "rgba(255,255,255,0.3)";
                                 let strokeWidth = 2;
 
+                                // 1. Base Control Color (Blue for US)
+                                if (usControlledAreas.includes(area.name)) {
+                                    fill = "rgba(33, 150, 243, 0.2)";
+                                }
+
                                 // Highlight selected area (Yellow)
                                 if (selectedArea && selectedArea.name === area.name) {
                                     fill = "rgba(255, 255, 0, 0.3)"; // Yellow tint

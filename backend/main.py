@@ -119,6 +119,7 @@ class ResolveCombatRequest(BaseModel):
     isNight: bool = False
     isElite: bool = False
     hasAirSupport: bool = False
+    terrainType: Optional[str] = None
 
 @app.post("/api/combat/resolve")
 def run_combat_resolution(data: ResolveCombatRequest):
@@ -132,7 +133,8 @@ def run_combat_resolution(data: ResolveCombatRequest):
         data.strategyMod,
         data.isNight,
         data.isElite,
-        data.hasAirSupport
+        data.hasAirSupport,
+        data.terrainType
     )
     return result
 

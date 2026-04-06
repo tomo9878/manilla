@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Stage, Layer, Image as KonvaImage, Line, Text, Group, Rect, Circle } from 'react-konva';
+
+const BASE = import.meta.env.BASE_URL;
 import Konva from 'konva';
 import useImage from 'use-image';
 import unitsData from './units_data.json';
@@ -16,8 +18,8 @@ const UNIT_SIZE = 100;
 
 const UnitCounter = ({ unit, x, y, indexInStack, isSelected, onDragStart, onDragEnd, onClick, onDblClick, onHover, onContextMenu }) => {
     // Load both images to prevent flickering when flipping
-    const [frontImg] = useImage(`/images/${unit.frontImage}`);
-    const [backImg] = useImage(unit.backImage ? `/images/${unit.backImage}` : null);
+    const [frontImg] = useImage(`${BASE}images/${unit.frontImage}`);
+    const [backImg] = useImage(unit.backImage ? `${BASE}images/${unit.backImage}` : null);
 
     // Determine current image based on status
     // US: spent -> backImage
@@ -1731,7 +1733,7 @@ function App() {
                             return (
                                 <div key={u.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                     <img
-                                        src={`/images/${((u.status === 'spent' || u.status === 'revealed') && u.backImage) ? u.backImage : u.frontImage}`}
+                                        src={`${BASE}images/${((u.status === 'spent' || u.status === 'revealed') && u.backImage) ? u.backImage : u.frontImage}`}
                                         alt={u.id}
                                         style={{ width: '100px', height: '100px', borderRadius: '4px' }}
                                     />
@@ -2138,7 +2140,7 @@ function App() {
                             {units.filter(u => u.status === 'out_of_action').map(u => (
                                 <img
                                     key={u.id}
-                                    src={`/images/${u.frontImage}`}
+                                    src={`${BASE}images/${u.frontImage}`}
                                     alt={u.id}
                                     style={{ width: '50px', height: '50px', borderRadius: '4px', cursor: 'context-menu', opacity: 0.8, border: '1px solid #777' }}
                                     onContextMenu={(e) => {

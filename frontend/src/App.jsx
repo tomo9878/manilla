@@ -10,6 +10,7 @@ import mapData from './map_data.json';
 import adjacencyData from './adjacency.json';
 import CombatModal from './components/CombatModal';
 import { applyCombatResult } from './logic/combatResolution';
+import { getUnitNameJa, getDivisionJa } from './logic/unitNames';
 import { processDawnPhase, processSupplyRoll, processBloodyStreetsCheck } from './logic/phases';
 import { processRandomEvent } from './logic/events';
 
@@ -1311,100 +1312,73 @@ function App() {
                 padding: '1rem',
                 color: '#eee',
                 overflowY: 'auto',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
             }}>
-                <h2 style={{ margin: '0 0 10px 0', fontSize: '1.5rem', color: '#ffcc00' }}>Manila 1945</h2>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#ffcc00' }}>Manila 1945</h2>
 
-                <div style={{ paddingBottom: '1rem', borderBottom: '1px solid #444', marginBottom: '1rem' }}>
-                    <div style={{ fontSize: '0.9rem', marginBottom: '5px' }}>
-                        Backend: <span style={{ color: '#0f0' }}>online</span>
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
-                        Map WxH: {mapSize.width} x {mapSize.height}<br />
-                        Scale: {scale.toFixed(4)}<br />
-                        Pos: {position.x.toFixed(0)}, {position.y.toFixed(0)}
-                    </div>
-                </div>
-
-                {/* Game Status Panel */}
-                <div style={{ padding: '10px', background: '#333', marginBottom: '1rem', borderRadius: '4px', border: '1px solid #555' }}>
-                    <div style={{ fontSize: '1.2rem', color: '#fff', fontWeight: 'bold', marginBottom: '5px' }}>
-                        Turn {turn}
-                    </div>
-                    <div style={{ color: '#00ccff', marginBottom: '5px' }}>
-                        Phase: {currentPhase}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                        <span>Morale: {morale}</span>
-                        <span>Supply: {supplyPoints}</span>
-                    </div>
-
-                    {/* Event Display */}
-                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #555' }}>
-                        <div style={{ fontSize: '0.85rem', color: '#aaa' }}>Current Event:</div>
-                        {currentEvent ? (
-                            <div style={{
-                                color: currentEvent.name === 'No Result' ? '#777' : '#ffeb3b',
-                                fontWeight: 'bold',
-                                fontSize: '0.9rem',
-                                marginTop: '3px'
-                            }}>
-                                {currentEvent.name}
-                                {currentEvent.type !== 'No Result' && (
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#ccc' }}>
-                                        ({currentEvent.type}) Roll: {currentEvent.roll}
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div style={{ fontSize: '0.85rem', color: '#555', fontStyle: 'italic' }}>None</div>
-                        )}
-                    </div>
-                </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                    <strong>Selected Area:</strong>
+                {/* 1. エリア情報 */}
+                <div>
+                    <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>選択エリア</div>
                     {selectedArea ? (
-                        <div style={{ marginTop: '5px', padding: '10px', background: '#333', borderRadius: '4px' }}>
-                            <div style={{ fontSize: '1.2rem', color: '#00ccff', fontWeight: 'bold' }}>{selectedArea.name}</div>
-                            <div style={{ color: '#aaa', marginTop: '5px' }}>Terrain: {selectedArea.terrain}</div>
-
-                            {/* Adjacency Info */}
-                            <div style={{ marginTop: '10px', borderTop: '1px solid #555', paddingTop: '5px' }}>
-                                <div style={{ fontSize: '0.8rem', color: '#888', marginBottom: '3px' }}>Adjacent To:</div>
-                                <div style={{ fontSize: '0.85rem', color: '#eee', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                    {adjacencyData[selectedArea.name] && adjacencyData[selectedArea.name].length > 0 ? (
-                                        adjacencyData[selectedArea.name].map(adj => (
-                                            <span key={adj} style={{
-                                                background: '#444',
-                                                padding: '2px 5px',
-                                                borderRadius: '3px',
-                                                border: '1px solid #555'
-                                            }}>
+                        <div style={{ padding: '10px', background: '#333', borderRadius: '4px', border: '1px solid #555' }}>
+                            <div style={{ fontSize: '1.1rem', color: '#00ccff', fontWeight: 'bold' }}>{selectedArea.name}</div>
+                            <div style={{ color: '#aaa', fontSize: '0.85rem', marginTop: '4px' }}>地形: {selectedArea.terrain}</div>
+                            <div style={{ marginTop: '8px', borderTop: '1px solid #555', paddingTop: '6px' }}>
+                                <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '4px' }}>隣接エリア:</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {(adjacencyData[selectedArea.name] ?? []).length > 0
+                                        ? adjacencyData[selectedArea.name].map(adj => (
+                                            <span key={adj} style={{ background: '#444', padding: '2px 5px', borderRadius: '3px', border: '1px solid #555', fontSize: '0.8rem' }}>
                                                 {adj}
                                             </span>
                                         ))
-                                    ) : (
-                                        <span style={{ color: '#777', fontStyle: 'italic' }}>None</span>
-                                    )}
+                                        : <span style={{ color: '#777', fontStyle: 'italic', fontSize: '0.8rem' }}>なし</span>
+                                    }
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div style={{ color: '#777', fontStyle: 'italic', marginTop: '5px' }}>Click an area on the map...</div>
+                        <div style={{ color: '#666', fontStyle: 'italic', fontSize: '0.85rem' }}>マップのエリアをクリック...</div>
                     )}
                 </div>
 
-                <div style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: '1.5rem' }}>
-                    <strong>操作方法:</strong><br />
-                    • ホイール: ズーム<br />
-                    • ドラッグ: マップ移動<br />
-                    • スタッククリック: ユニット切替<br />
-                    • ダブルクリック: 裏返す
+                {/* 2. ユニット一覧 */}
+                <div style={{ flex: '1 1 0', minHeight: 0 }}>
+                    <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {selectedArea ? `${selectedArea.name} のユニット` : '全ユニット'}
+                    </div>
+                    <div style={{ overflowY: 'auto', maxHeight: '220px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {units
+                            .filter(u => !['eliminated', 'future'].includes(u.status) && (selectedArea ? u.location === selectedArea.name : true))
+                            .map(u => (
+                                <div key={u.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    padding: '6px 8px', background: '#2a2a2a', borderRadius: '3px',
+                                    border: `1px solid ${u.faction === 'JP' ? '#7a2020' : '#1a4a7a'}`,
+                                    opacity: u.status === 'out_of_action' ? 0.5 : 1,
+                                }}>
+                                    <img src={`${BASE}images/${u.frontImage}`} alt={u.id} style={{ width: '42px', height: '42px', borderRadius: '2px', flexShrink: 0 }} />
+                                    <div style={{ fontSize: '0.875rem', overflow: 'hidden' }}>
+                                        {getDivisionJa(u.id) && (
+                                            <div style={{ color: '#aaa', fontSize: '0.7rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getDivisionJa(u.id)}</div>
+                                        )}
+                                        <div style={{ color: u.faction === 'JP' ? '#f88' : '#8bf', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getUnitNameJa(u.id) ?? u.name}</div>
+                                        <div style={{ color: '#777', fontSize: '0.8rem' }}>{u.status}</div>
+                                    </div>
+                                </div>
+                            ))
+                        }
+                        {units.filter(u => !['eliminated', 'future'].includes(u.status) && (selectedArea ? u.location === selectedArea.name : true)).length === 0 && (
+                            <div style={{ color: '#666', fontStyle: 'italic', fontSize: '0.8rem' }}>ユニットなし</div>
+                        )}
+                    </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                {/* 3. フェーズボタン */}
+                <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
                     <button
                         onClick={handleStartGame}
                         style={{
@@ -1797,30 +1771,31 @@ function App() {
 
                 <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
 
-                    {/* Turn (Static for now) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
                         <div style={{ fontSize: '0.8rem', color: '#aaa' }}>ターン</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>1</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{turn} / 9</div>
                     </div>
 
-                    {/* Supply (Interactive) */}
-                    <div style={{ background: '#333', padding: '10px', borderRadius: '4px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>米軍補給</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4caf50' }}>{supplyPoints}</div>
+                    <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>フェーズ</div>
+                        <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#00ccff' }}>{currentPhase}</div>
+                    </div>
+
+                    <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>米軍士気</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: morale >= 10 ? '#2196f3' : '#ff9800' }}>
+                            {morale} {morale >= 10 ? '(強固)' : '(動揺)'}
                         </div>
                     </div>
 
-                    {/* Morale (Static) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>米軍士気</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#2196f3' }}>19 (強固)</div>
+                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>米軍補給</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4caf50' }}>{supplyPoints}</div>
                     </div>
 
-                    {/* Control (Dynamic) */}
                     <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
                         <div style={{ fontSize: '0.8rem', color: '#aaa' }}>米軍支配</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControlledAreas.length} (目標: 34)</div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControlledAreas.length} / 34</div>
                     </div>
                 </div>
 

@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import './CombatModal.css';
+import { calculateCombatStats } from '../logic/combatCalc';
+import { resolveCombat } from '../logic/combatResolution';
 
 /**
  * CombatModal
@@ -47,7 +49,6 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         }
     }, [attackerUnits]);
 
-    // Auto-Recalculate trigger
     useEffect(() => {
         if (step === 'SETUP' && selectedLeadId && activeAttackers.length > 0) {
             recalculate();
@@ -133,38 +134,25 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         }
     };
 
-    const recalculate = async () => {
-        // Validation: At least one unit must participate (and not just HQ with 0 attack? 
-        // Backend handles "No attacking units" case.
-        // We filter activeAttackers by participatingIds.
+    const recalculate = () => {
         const participatingUnits = activeAttackers
             .filter(u => participatingIds.has(u.id))
             .map(u => ({ ...u, is_lead: u.id === selectedLeadId }));
 
-        try {
-            const response = await fetch('/api/combat/calculate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    attackerUnits: participatingUnits,
-                    supportModifiers: support,
-                    morale: morale,
-                    terrainType: terrain,
-                    defenderUnit: {
-                        name: defenderUnit.name,
-                        defense_factor: defenderUnit.strength || 3,
-                        is_elite: defenderUnit.unitClass === 'Elite'
-                    },
-                    isMandatoryAttack: false,
-                    eventCiviActive: false
-                })
-            });
-            const data = await response.json();
-            setCalculatedStats(data);
-        } catch (e) {
-            console.error("Calc Error", e);
-            setCalculatedStats({ av: 99, dv: 99, logs: ["API Error"] });
-        }
+        const data = calculateCombatStats({
+            attackerUnits: participatingUnits,
+            supportModifiers: support,
+            morale,
+            terrainType: terrain,
+            defenderUnit: defenderUnit ? {
+                name: defenderUnit.name,
+                defense_factor: defenderUnit.strength ?? 3,
+                is_elite: defenderUnit.unitClass === 'Elite',
+            } : null,
+            isMandatoryAttack: false,
+            eventCiviActive: false,
+        });
+        setCalculatedStats(data);
     };
 
     const handleRoll = async () => {
@@ -172,20 +160,13 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         setStep('RESOLUTION');
 
         try {
-            const response = await fetch('/api/combat/resolve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    attackValue: calculatedStats.av,
-                    defenseValue: calculatedStats.dv,
-                    terrainMod: 0,
-                    strategyMod: 0,
-                    isElite: defenderUnit.unitClass === 'Elite',
-                    hasAirSupport: support.air_support,
-                    terrainType: terrain
-                })
+            const data = resolveCombat({
+                attackValue:  calculatedStats.av,
+                defenseValue: calculatedStats.dv,
+                isElite:      defenderUnit.unitClass === 'Elite',
+                hasAirSupport: support.air_support,
+                terrainType:  terrain,
             });
-            const data = await response.json();
 
             // Check Fanatic Rule
             if (defenderUnit.unitClass === 'Fanatic' && data.is_success && !data.is_overrun) {

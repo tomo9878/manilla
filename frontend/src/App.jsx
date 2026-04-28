@@ -9,6 +9,9 @@ import japaneseUnitsData from './japanese_units_data.json';
 import mapData from './map_data.json';
 import adjacencyData from './adjacency.json';
 import CombatModal from './components/CombatModal';
+import { applyCombatResult } from './logic/combatResolution';
+import { processDawnPhase, processSupplyRoll, processBloodyStreetsCheck } from './logic/phases';
+import { processRandomEvent } from './logic/events';
 
 
 // High-DPI setting
@@ -98,7 +101,7 @@ const UnitCounter = ({ unit, x, y, indexInStack, isSelected, onDragStart, onDrag
 
 const MapImage = ({ onImageLoad }) => {
     // ... existing MapImage code ...
-    const [image, status] = useImage('/map.jpg');
+    const [image, status] = useImage(`${import.meta.env.BASE_URL}map.jpg`);
 
     useEffect(() => {
         if (image) {
@@ -220,53 +223,25 @@ function App() {
     };
 
     // Phase Handlers
-    const handleEventPhase = async () => {
-        try {
-            const tags = getUsControlledTags();
-            const res = await fetch('/api/phase/event', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    currentTurn: turn,
-                    units: units,
-                    morale: morale,
-                    lastEvent: lastEvent,
-                    usControlledTags: tags
-                })
-            });
+    const handleEventPhase = () => {
+        const data = processRandomEvent({
+            currentTurn: turn,
+            units,
+            morale,
+            lastEvent,
+            usControlledTags: getUsControlledTags(),
+        });
 
-            const data = await res.json();
+        setCurrentEvent(data.event);
+        setLastEvent(data.event);
 
-            // Update State
-            setCurrentEvent(data.event);
+        if (data.morale !== morale) {
+            setMorale(data.morale);
+            setTimeout(() => alert(`Morale Change: Now ${data.morale}`), 100);
+        }
 
-            // Only update lastEvent if it's a Pause (to track consecutive pauses correctly)
-            // If we overwrite with "No Result", we lose history of the previous pause?
-            // Rule Says: "If the same US Division... is selected for a SECOND consecutive Turn..."
-            // This implies we compare Turn N result with Turn N-1 result.
-            // If Turn 2 was "Pause 1st Cav", and Turn 3 is "No Result", then Turn 4 rolls "Pause 1st Cav"...
-            // Is that consecutive? No, because Turn 3 was No Result.
-            // So we SHOULD update lastEvent every turn, even if No Result.
-            // Wait, "Consecutive Turn" means T and T+1. 
-            // So yes, we overwrite lastEvent every turn.
-            setLastEvent(data.event);
-
-            if (data.morale !== morale) {
-                setMorale(data.morale);
-                // Alert after state update
-                setTimeout(() => alert(`Morale Change: Now ${data.morale}`), 100);
-            }
-
-            if (data.logs.length > 0) {
-                console.log("Event Phase Logs:", data.logs);
-                setTimeout(() => alert("イベント結果:\n" + data.event.name + "\n\n" + data.logs.join('\n')), 200);
-            }
-
-            // Ready to proceed to next phase (Supply) manually
-
-        } catch (e) {
-            console.error("Event API Error", e);
-            alert("イベントフェーズ処理エラー");
+        if (data.logs.length > 0) {
+            setTimeout(() => alert("イベント結果:\n" + data.event.name + "\n\n" + data.logs.join('\n')), 200);
         }
     };
 
@@ -302,89 +277,30 @@ function App() {
         setContestedAreas(newContested);
     };
 
-    // --- Strategy Casualty Handler (Instant) ---
-    const handleStrategyCasualty = async (casualtyIds) => {
-        // Immediate Backend Call
-        try {
-            await fetch('/api/combat/apply_result', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    resultType: 'StrategyCasualty',
-                    attackerUnits: [], // Not needed for this type
-                    defenderUnit: null,
-                    targetArea: '',
-                    currentMorale: morale,
-                    strategyCasualtyIds: casualtyIds
-                })
-            });
-            console.log(`Strategy Casualties Applied: ${casualtyIds.join(', ')}`);
-        } catch (e) {
-            console.error("Strategy Casualty API Error", e);
-        }
-
-        // Immediate Frontend Update
-        setUnits(prev => prev.map(u => {
-            if (casualtyIds.includes(u.id)) {
-                return { ...u, status: 'out_of_action' };
-            }
-            return u;
-        }));
+    const handleStrategyCasualty = (casualtyIds) => {
+        setUnits(prev => prev.map(u =>
+            casualtyIds.includes(u.id) ? { ...u, status: 'out_of_action' } : u
+        ));
     };
 
 
-    const handleDawnPhase = async () => {
-        try {
-            const res = await fetch('/api/phase/dawn', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ currentTurn: turn, units: units, morale: morale })
-            });
-            if (!res.ok) throw new Error("API Call Failed");
-
-            const data = await res.json();
-
-            // Log messages to user
-            console.log("Dawn Phase Results:", data.logs);
-            if (data.logs.length > 0) {
-                alert("夜明けフェーズ報告:\n" + data.logs.join('\n'));
-            }
-
-            // Update State
-            setUnits(data.units);
-            setMorale(data.morale);
-            setCurrentPhase('Event'); // Advance to Event Phase
-        } catch (e) {
-            console.error(e);
-            alert("夜明けフェーズ処理エラー。バックエンドを確認してください。");
+    const handleDawnPhase = () => {
+        const data = processDawnPhase({ currentTurn: turn, units, morale });
+        if (data.logs.length > 0) {
+            alert("夜明けフェーズ報告:\n" + data.logs.join('\n'));
         }
+        setUnits(data.units);
+        setMorale(data.morale);
+        setCurrentPhase('Event');
     };
 
 
-    // Supply Phase Logic
-    const handleSupplyRoll = async () => {
-        try {
-            const res = await fetch('/api/phase/supply/roll', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ currentTurn: turn, currentSupply: supplyPoints })
-            });
-            const data = await res.json();
-
-            setSupplyPoints(data.new_total);
-            setSupplyRolled(true);
-
-            if (data.logs.length > 0) {
-                const translatedLogs = data.logs.map(log =>
-                    log.replace('Supply Roll Results:', '補給ダイス結果:') // Assuming exact match logic isn't strictly needed for simple replace
-                        .replace('Supply Roll', '補給ダイス')
-                        .replace('Supply Points', '補給ポイント')
-                );
-                alert("補給結果:\n" + translatedLogs.join('\n'));
-            }
-        } catch (e) {
-            console.error("Supply Roll Error", e);
-            alert("補給ダイスの処理に失敗しました。");
+    const handleSupplyRoll = () => {
+        const data = processSupplyRoll({ currentTurn: turn, currentSupply: supplyPoints });
+        setSupplyPoints(data.new_total);
+        setSupplyRolled(true);
+        if (data.logs.length > 0) {
+            alert("補給結果:\n" + data.logs.join('\n'));
         }
     };
 
@@ -404,9 +320,7 @@ function App() {
         }
     };
 
-    // --- Bloody Streets Logic ---
-    const checkBloodyStreets = async () => {
-        // Build Area Data
+    const checkBloodyStreets = () => {
         const areaData = mapData.map(area => {
             const areaUnits = units.filter(u =>
                 !['out_of_action', 'eliminated', 'wounded', 'future'].includes(u.status) &&
@@ -416,34 +330,17 @@ function App() {
                 name: area.name,
                 terrain: area.terrain,
                 us_count: areaUnits.filter(u => u.faction !== 'JP').length,
-                jp_count: areaUnits.filter(u => u.faction === 'JP').length
+                jp_count: areaUnits.filter(u => u.faction === 'JP').length,
             };
         });
 
-        try {
-            const res = await fetch('/api/phase/bloody_streets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ areaData })
-            });
-            const data = await res.json();
+        const data = processBloodyStreetsCheck({ areaData });
 
-            if (data.results && data.results.length > 0) {
-                console.log("Bloody Streets Events:", data.results);
-                setBloodyStreetsQueue(data.results);
-                alert("⚠️ Bloody Streets detected! Resolve casualties before Combat Phase.");
-            } else {
-                console.log("No Bloody Streets events.");
-                setCurrentPhase('Combat');
-            }
-
-            if (data.logs.length > 0) {
-                console.log(data.logs.join('\n'));
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Error checking Bloody Streets.");
-            setCurrentPhase('Combat'); // Fallback
+        if (data.results.length > 0) {
+            setBloodyStreetsQueue(data.results);
+            alert("⚠️ Bloody Streets detected! Resolve casualties before Combat Phase.");
+        } else {
+            setCurrentPhase('Combat');
         }
     };
 
@@ -557,112 +454,39 @@ function App() {
         setShowCombatModal(true);
     };
 
-    const handleCombatApply = async (result) => {
-        console.log("Applying Combat Result:", result);
+    const handleCombatApply = (result) => {
+        const apiData = applyCombatResult({
+            resultType:          result.resultType,
+            attackerUnits:       result.attackerUnits ?? [],
+            defenderUnit:        result.defenderUnit ?? null,
+            targetArea:          combatData.areaName,
+            currentMorale:       morale,
+            strategyCasualtyIds: result.strategyCasualtyIds ?? [],
+        });
 
-        let apiData = null;
-
-        // 1. Call Backend API to finalize state/logs
-        try {
-            const res = await fetch('/api/combat/apply_result', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    resultType: result.resultType,
-                    attackerUnits: result.attackerUnits,
-                    defenderUnit: result.defenderUnit,
-                    targetArea: combatData.areaName,
-                    currentMorale: morale,
-                    strategyCasualtyIds: result.strategyCasualtyIds
-                })
-            });
-            apiData = await res.json();
-            console.log("API Apply Response:", apiData);
-
-        } catch (e) {
-            console.error("API Apply Error", e);
-        }
-
-        // Update Local State based on Result
         const updatedIds = new Set();
-        const updates = {};
+        const updates    = {};
 
-        // Use API Data if available (Source of Truth)
-        if (apiData) {
-            if (apiData.updated_attacker_units) {
-                apiData.updated_attacker_units.forEach(u => {
-                    updatedIds.add(u.id);
-                    updates[u.id] = u;
-                });
-            }
-            if (apiData.updated_defender_unit) {
-                updatedIds.add(apiData.updated_defender_unit.id);
-                updates[apiData.updated_defender_unit.id] = apiData.updated_defender_unit;
-            }
-
-            // Strategy Casualties handling (if not already covered in updated units lists)
-            // The API usually returns all updated units, so explicit strategy handling might be redundant if API is correct.
-            // But let's check strategyCasualtyIds just in case they are separate.
-            // backend apply_combat_result returns updated_attacker_units which includes casualties.
-
-            // Update Morale from API
-            if (apiData.new_morale !== undefined) {
-                setMorale(apiData.new_morale);
-            }
-
-            // Update Control from API
-            if (apiData.area_update && apiData.area_update.control === 'US') {
-                setUsControlledAreas(prev => Array.from(new Set([...prev, combatData.areaName])));
-            }
-
-        } else {
-            // Fallback: Manual Logic (Network Error case)
-            console.warn("Using Fallback Logic for Combat Update");
-
-            const isOverrun = result.is_overrun || result.isOverrun;
-            const attackerStatus = isOverrun ? 'fresh' : 'spent';
-
-            if (result.attackerUnits) {
-                result.attackerUnits.forEach(u => {
-                    updatedIds.add(u.id);
-                    updates[u.id] = { ...u, status: attackerStatus };
-                });
-            }
-
-            if (result.defenderUnit) {
-                updatedIds.add(result.defenderUnit.id);
-                // Force reveal if fallback
-                updates[result.defenderUnit.id] = { ...result.defenderUnit, status: 'revealed' };
-            }
-
-            // Strategy Casualties
-            if (result.strategyCasualtyIds && result.strategyCasualtyIds.length > 0) {
-                result.strategyCasualtyIds.forEach(id => {
-                    updatedIds.add(id);
-                    updates[id] = { status: 'out_of_action' };
-                });
-            }
-
-            if (result.resultType === 'Repulse') {
-                setMorale(m => m - 1);
-            }
-            if (result.resultType === 'Success' || result.resultType === 'Overrun') {
-                setUsControlledAreas(prev => Array.from(new Set([...prev, combatData.areaName])));
-            }
+        if (apiData.updated_attacker_units) {
+            apiData.updated_attacker_units.forEach(u => {
+                updatedIds.add(u.id);
+                updates[u.id] = u;
+            });
+        }
+        if (apiData.updated_defender_unit) {
+            updatedIds.add(apiData.updated_defender_unit.id);
+            updates[apiData.updated_defender_unit.id] = apiData.updated_defender_unit;
+        }
+        if (apiData.new_morale !== undefined) {
+            setMorale(apiData.new_morale);
+        }
+        if (apiData.area_update?.control === 'US') {
+            setUsControlledAreas(prev => Array.from(new Set([...prev, combatData.areaName])));
         }
 
-        // Apply Updates
-        setUnits(prev => prev.map(u => {
-            if (updatedIds.has(u.id)) {
-                // If update is partial, merge. If complete (from API), it replaces.
-                // API sends complete unit objects usually.
-                // We'll merge just to be safe if API sends partials in future, 
-                // but for now apiData units are likely complete.
-                const update = updates[u.id];
-                return { ...u, ...update };
-            }
-            return u;
-        }));
+        setUnits(prev => prev.map(u =>
+            updatedIds.has(u.id) ? { ...u, ...updates[u.id] } : u
+        ));
 
         if (result.isOverrun || result.is_overrun) {
             alert("OVERRUN! Attackers remain Fresh and can continue action.");
@@ -924,11 +748,7 @@ function App() {
         };
         window.addEventListener('resize', handleResize);
 
-        // Backend check
-        fetch('/api/health')
-            .then(res => res.json())
-            .then(data => setBackendStatus(data.status))
-            .catch(() => setBackendStatus('Offline'));
+        setBackendStatus('online');
 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -1497,7 +1317,7 @@ function App() {
 
                 <div style={{ paddingBottom: '1rem', borderBottom: '1px solid #444', marginBottom: '1rem' }}>
                     <div style={{ fontSize: '0.9rem', marginBottom: '5px' }}>
-                        Backend: <span style={{ color: backendStatus === 'healthy' ? '#0f0' : '#f00' }}>{backendStatus}</span>
+                        Backend: <span style={{ color: '#0f0' }}>online</span>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
                         Map WxH: {mapSize.width} x {mapSize.height}<br />

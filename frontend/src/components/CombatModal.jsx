@@ -194,6 +194,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
             } else {
                 if (data.is_overrun) data.resultTypeActual = 'Overrun';
                 else if (data.is_success) data.resultTypeActual = 'Success';
+                else if (data.diff === 0) data.resultTypeActual = 'Stalemate';
                 else data.resultTypeActual = 'Repulse';
             }
 

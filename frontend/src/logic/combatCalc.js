@@ -1,3 +1,5 @@
+import { unitLabel } from './unitNames.js';
+
 /**
  * Pre-combat AV/DV calculation.
  * Pure function — no dice, no side effects.
@@ -17,16 +19,16 @@ export function calculateCombatStats({
 
     // ── AV ────────────────────────────────────────────────
     const leadUnit = attackerUnits.find(u => u.is_lead) ?? attackerUnits[0] ?? null;
-    if (!leadUnit) return { av: 0, dv: 0, logs: ['No attacking units'] };
+    if (!leadUnit) return { av: 0, dv: 0, logs: ['攻撃部隊なし'] };
 
     const baseAv = leadUnit.attack_factor ?? 2;
     av += baseAv;
-    logs.push(`AV Base (Lead ${leadUnit.name}): ${baseAv}`);
+    logs.push(`攻撃値 基本値 (先導: ${unitLabel(leadUnit)}): ${baseAv}`);
 
     const additionalCount = attackerUnits.length - 1;
     if (additionalCount > 0) {
         av += additionalCount;
-        logs.push(`AV Additional Units (+${additionalCount}): Total ${attackerUnits.length} units`);
+        logs.push(`攻撃値 追加部隊 (+${additionalCount}): 計 ${attackerUnits.length} 部隊`);
     }
 
     const artyCount = supportModifiers.artillery ?? 0;
@@ -35,7 +37,7 @@ export function calculateCombatStats({
 
     av += artyCount + engCount * 2;
     if (totalSupport > 0) {
-        logs.push(`AV Support: Arty x${artyCount} (+${artyCount}), Eng x${engCount} (+${engCount * 2})`);
+        logs.push(`攻撃値 支援: 砲兵 x${artyCount} (+${artyCount}), 工兵 x${engCount} (+${engCount * 2})`);
     }
 
     // Combined Arms (Tank + Infantry + Support)
@@ -45,24 +47,24 @@ export function calculateCombatStats({
         if (['Urban', 'Fort'].includes(terrainType)) {
             if (engCount > 0) {
                 av += 1;
-                logs.push('AV Combined Arms Bonus (Rubble/Eng): +1');
+                logs.push('攻撃値 諸兵科連合ボーナス (廃墟/工兵): +1');
             } else {
-                logs.push('No Combined Arms Bonus: Urban/Fort requires Engineer support.');
+                logs.push('諸兵科連合ボーナスなし: 市街地/要塞は工兵支援が必要');
             }
         } else {
             av += 1;
-            logs.push('AV Combined Arms Bonus: +1');
+            logs.push('攻撃値 諸兵科連合ボーナス: +1');
         }
     }
 
     if (morale >= 10) {
         av += 1;
-        logs.push(`AV Strong Morale (${morale}): +1`);
+        logs.push(`攻撃値 高士気 (${morale}): +1`);
     }
 
     if (eventCiviActive && isMandatoryAttack) {
         av -= 1;
-        logs.push('AV Penalty (Civilians & Mandatory): -1');
+        logs.push('攻撃値 ペナルティ (市民 & 強制攻撃): -1');
     }
 
     // Mixed formation penalty (-1 per extra formation beyond first)
@@ -76,29 +78,28 @@ export function calculateCombatStats({
     if (formations.size > 1) {
         const penalty = -(formations.size - 1);
         av += penalty;
-        logs.push(`AV Parent Formation Penalty: ${penalty} (Mixed ${[...formations].join(', ')})`);
+        logs.push(`攻撃値 混成部隊ペナルティ: ${penalty} (混成: ${[...formations].join(', ')})`);
     }
 
     // ── DV ────────────────────────────────────────────────
     const baseDf = defenderUnit ? (defenderUnit.defense_factor ?? 3) : 3;
     dv += baseDf;
-    logs.push(`DV Base (${defenderUnit?.name ?? '??'}): ${baseDf}`);
 
     const terrainBonus = { Urban: 3, Fort: 4, Clear: 2 };
     const tMod = terrainBonus[terrainType] ?? 0;
     dv += tMod;
-    logs.push(`DV Terrain (${terrainType}): +${tMod}`);
+    logs.push(`防御値: 基本値 ${baseDf} + 地形(${terrainType}) ${tMod} = ${baseDf + tMod}  [${unitLabel(defenderUnit)}]`);
 
     if (morale <= 9) {
         dv += 1;
-        logs.push(`DV Shaken Bonus (US Morale ${morale}): +1`);
+        logs.push(`防御値 動揺ボーナス (米軍士気 ${morale}): +1 → 計 ${dv}`);
     }
 
     if (supportModifiers.air_support) {
-        logs.push('DV Air Support: Will reduce DV by 1d6 during resolution');
+        logs.push('防御値 航空支援: 解決時に1d6分防御値を減少');
     }
     if (defenderUnit?.is_elite) {
-        logs.push('DV Elite: Will roll 3d6 (drop lowest) for Defense');
+        logs.push('防御値 精鋭: 防御に3d6（最低値除外）を使用');
     }
 
     return { av, dv, logs };

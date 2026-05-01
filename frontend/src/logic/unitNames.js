@@ -49,6 +49,9 @@ export const UNIT_NAMES_JA = {
 
 export const getUnitNameJa = (id) => UNIT_NAMES_JA[id] ?? null;
 
+// Returns the best display name for a unit object (Japanese if available, else raw name)
+export const unitLabel = (unit) => UNIT_NAMES_JA[unit?.id] ?? unit?.name ?? '???';
+
 const DIVISION_NAMES_JA = {
     '37':  '第37歩兵師団',
     '1C':  '第1騎兵師団',

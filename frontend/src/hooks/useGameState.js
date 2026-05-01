@@ -480,10 +480,13 @@ export function useGameState() {
     const getRecoveryCost = (unit) =>
         ['Armor', 'Tank'].includes(unit?.type) ? 3 : 2;
 
+    const DIVISION_BASE_AREA = { '37th': 'Area 1', '1st': 'Area 2', '11th': 'Area 30' };
+
     const getRecoveryAreas = (unit) => {
         const division = getDivision(unit);
-        const BASE_AREAS = ['Area 1', 'Area 2', 'Area 30'];
-        const validSet = new Set(BASE_AREAS.filter(a => usControlledAreas.includes(a)));
+        const baseArea = DIVISION_BASE_AREA[division];
+        const validSet = new Set();
+        if (baseArea && usControlledAreas.includes(baseArea)) validSet.add(baseArea);
         if (division) {
             const friendlies = units.filter(u =>
                 !['out_of_action', 'eliminated', 'wounded', 'future'].includes(u.status) &&

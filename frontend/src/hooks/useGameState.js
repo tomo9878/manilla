@@ -222,6 +222,22 @@ export function useGameState() {
         setCurrentEvent(data.event);
         setLastEvent(data.event);
         if (data.morale !== morale) setMorale(data.morale);
+
+        // Pause イベント: 対象師団の全ユニットを消耗状態に
+        if (data.event.type === 'Pause' && data.event.target) {
+            const prefix = data.event.target;
+            setUnits(prev => prev.map(u => {
+                const matchesDiv =
+                    (prefix === '1C'  && u.id.startsWith('1C_')) ||
+                    (prefix === '37'  && u.id.startsWith('37_')) ||
+                    (prefix === '11'  && (u.id.startsWith('11-') || u.id.startsWith('11A_')));
+                if (matchesDiv && u.faction === 'US' && !['out_of_action', 'eliminated', 'future'].includes(u.status)) {
+                    return { ...u, status: 'spent' };
+                }
+                return u;
+            }));
+        }
+
         setEventNotification({ event: data.event, logs: data.logs });
     };
 

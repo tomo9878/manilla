@@ -67,8 +67,14 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         if (onReveal && defenderUnit) {
             onReveal(defenderUnit.id);
         }
-        setStep('STRATEGY');
-        setTimeout(() => processDefenseStrategy(), 1000);
+        // Already revealed (re-attack): skip strategy phase
+        if (defenderUnit?.status === 'revealed') {
+            addLog('防衛戦略: スキップ (既に判明済み・再攻撃)', 'info');
+            setStep('SETUP');
+        } else {
+            setStep('STRATEGY');
+            setTimeout(() => processDefenseStrategy(), 1000);
+        }
     };
 
     const STRATEGY_JA = { Ambush: '待ち伏せ', Sniper: '狙撃', Barrage: '砲撃', Fanatic: '狂信', Elite: '精鋭', Infantry: '歩兵' };

@@ -314,6 +314,7 @@ export function useGameState() {
     };
 
     const handleEndPhase = () => {
+        setSupplyRolled(false);
         setUnits(units.map(u => u.status === 'spent' ? { ...u, status: 'fresh' } : u));
         setSupportUnits(prev => {
             const next = {};

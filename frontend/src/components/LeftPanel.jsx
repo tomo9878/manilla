@@ -1,4 +1,5 @@
-import { getUnitNameJa, getDivisionJa } from '../logic/unitNames';
+import { useState } from 'react';
+import { getUnitNameJa, getDivisionJa, unitLabel } from '../logic/unitNames';
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -7,7 +8,15 @@ const LeftPanel = ({
     selectedUnitId, handleUnitClick,
     handleDawnPhase, handleEventPhase, handleProceedToSupply, handleEndPhase,
     handleSaveGame, handleLoadGame, fileInputRef,
-}) => (
+    supplyPoints, getRecoveryCost, getRecoveryAreas, handleRecoverUnit,
+}) => {
+    const [recoveryTarget, setRecoveryTarget] = useState(null);
+
+    const ooa = units.filter(u => u.faction === 'US' && u.status === 'out_of_action');
+    const target = recoveryTarget ? units.find(u => u.id === recoveryTarget) : null;
+    const validAreas = target && getRecoveryAreas ? getRecoveryAreas(target) : [];
+
+    return (
     <div style={{
         flex: '0 0 20%',
         background: '#1e1e1e',
@@ -93,6 +102,58 @@ const LeftPanel = ({
             </div>
         </div>
 
+        {/* OOA部隊の回復 (補給フェーズのみ) */}
+        {currentPhase === 'Supply' && ooa.length > 0 && (
+            <div>
+                <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>OOA部隊の回復</div>
+                <div style={{ background: '#2a2a2a', borderRadius: '4px', border: '1px solid #555', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ color: '#aaa', fontSize: '0.75rem' }}>補給ポイント残: <span style={{ color: '#4caf50', fontWeight: 'bold' }}>{supplyPoints}</span></div>
+                    {ooa.map(u => {
+                        const cost = getRecoveryCost ? getRecoveryCost(u) : 2;
+                        const isSelected = recoveryTarget === u.id;
+                        const canAfford = supplyPoints >= cost;
+                        return (
+                            <div key={u.id}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 6px', background: isSelected ? '#1a3a6a' : '#333', borderRadius: '4px', border: `1px solid ${isSelected ? '#ffcc00' : '#444'}` }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: '0.8rem', color: '#8bf' }}>{unitLabel(u)}</div>
+                                        <div style={{ fontSize: '0.7rem', color: '#888' }}>{u.type} — {cost}pt</div>
+                                    </div>
+                                    <button
+                                        onClick={() => setRecoveryTarget(isSelected ? null : u.id)}
+                                        disabled={!canAfford}
+                                        style={{ padding: '3px 8px', background: canAfford ? (isSelected ? '#ffcc00' : '#1a4a2a') : '#333', color: canAfford ? (isSelected ? '#000' : '#4f4') : '#666', border: 'none', borderRadius: '3px', cursor: canAfford ? 'pointer' : 'default', fontSize: '0.75rem' }}
+                                    >
+                                        {isSelected ? 'キャンセル' : '回復'}
+                                    </button>
+                                </div>
+                                {isSelected && (
+                                    <div style={{ padding: '5px 6px', background: '#111', borderRadius: '0 0 4px 4px', border: '1px solid #ffcc00', borderTop: 'none' }}>
+                                        <div style={{ fontSize: '0.7rem', color: '#aaa', marginBottom: '3px' }}>配置先:</div>
+                                        {validAreas.length > 0 ? (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                                                {validAreas.map(area => (
+                                                    <button
+                                                        key={area}
+                                                        onClick={() => { handleRecoverUnit(u.id, area); setRecoveryTarget(null); }}
+                                                        style={{ padding: '3px 8px', background: '#1a4a7a', color: 'white', border: '1px solid #4a8aaa', borderRadius: '3px', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                    >
+                                                        {area}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div style={{ color: '#f88', fontSize: '0.7rem' }}>配置可能エリアなし</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        )}
+
         {/* フェーズボタン */}
         <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
             {currentPhase === 'Dawn' && (
@@ -144,6 +205,7 @@ const LeftPanel = ({
             <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleLoadGame} accept=".json" />
         </div>
     </div>
-);
+    );
+};
 
 export default LeftPanel;

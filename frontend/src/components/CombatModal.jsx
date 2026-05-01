@@ -60,7 +60,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         setCombatLogs(prev => [...prev, { msg, type }]);
     };
 
-    const isLeader = (unit) => /HQ|Gen|Leader|Beightler|Chase|Haugen|Griswold/i.test(unit.name) || /HQ/i.test(unit.type);
+    const isLeader = (unit) => /HQ|Gen|Leader|Beightler|Chase|Haugen|Griswold|Hoffman|Fredrick|Whitcomb|White|Soule|Hildebrand|Swing|Struble/i.test(unit.name) || /HQ|Leader/i.test(unit.type);
 
     const handleReveal = () => {
         setIsRevealed(true);

@@ -28,7 +28,7 @@ export function processDawnPhase({ currentTurn, units, morale }) {
         }
 
         // Leader casualty checks
-        const isLeader = /HQ|Gen|Haugen|Beightler|Chase|Griswold|Swing|Struble/i.test(name + id);
+        const isLeader = /HQ|Gen|Haugen|Beightler|Chase|Griswold|Swing|Struble|Hoffman|Fredrick|Whitcomb|White|Soule|Hildebrand/i.test(name + id) || unit.type === 'Leader';
         if (isLeader) {
             if (status === 'out_of_action') {
                 if (currentTurn === 1) {

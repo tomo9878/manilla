@@ -269,7 +269,7 @@ export function useGameState() {
     };
 
     const handleEndPhase = () => {
-        setUnits(units.map(u => ({ ...u, status: 'fresh' })));
+        setUnits(units.map(u => u.status === 'spent' ? { ...u, status: 'fresh' } : u));
         setSupportUnits(prev => {
             const next = {};
             Object.keys(prev).forEach(k => { next[k] = { ...prev[k], used: 0 }; });

@@ -220,6 +220,47 @@ function App() {
                 handleOOAHover={gs.handleOOAHover}
             />
 
+            {/* Deployment Modal */}
+            {gs.currentPhase === 'Deployment' && gs.deploymentUnits.length > 0 && (() => {
+                const unit = gs.deploymentUnits[0];
+                const remaining = gs.deploymentUnits.length;
+                const availableAreas = gs.DEPLOYMENT_AREAS.filter(a => gs.usControlledAreas.includes(a));
+                return (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                        <div style={{ background: '#1e1e1e', border: '2px solid #ffcc00', borderRadius: '8px', padding: '2rem', minWidth: '360px', color: '#eee' }}>
+                            <h2 style={{ margin: '0 0 0.5rem', color: '#ffcc00' }}>増援配置</h2>
+                            <div style={{ color: '#aaa', marginBottom: '1.5rem', fontSize: '0.85rem' }}>残り {remaining} 部隊</div>
+
+                            <div style={{ background: '#2a2a2a', borderRadius: '4px', padding: '1rem', marginBottom: '1.5rem', border: '1px solid #444' }}>
+                                <div style={{ color: '#8bf', fontWeight: 'bold', marginBottom: '4px' }}>
+                                    {unit.name}
+                                </div>
+                                <div style={{ color: '#888', fontSize: '0.8rem' }}>{unit.type} | AF{unit.attack_factor} DF{unit.defense_factor}</div>
+                            </div>
+
+                            <div style={{ marginBottom: '1rem', color: '#aaa', fontSize: '0.85rem' }}>配置先を選択:</div>
+                            {availableAreas.length > 0 ? (
+                                <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                                    {availableAreas.map(area => (
+                                        <button
+                                            key={area}
+                                            onClick={() => gs.handleDeployUnit(unit.id, area)}
+                                            style={{ padding: '12px', background: '#1a4a7a', color: 'white', border: '1px solid #4a8aaa', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}
+                                        >
+                                            {area}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div style={{ color: '#f88', padding: '1rem', background: '#2a1a1a', borderRadius: '4px' }}>
+                                    利用可能な配置エリアがありません（Area 27/28/30 が米軍支配下にない）
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* Combat Modal */}
             {gs.showCombatModal && gs.combatData && (
                 <CombatModal

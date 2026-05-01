@@ -56,6 +56,9 @@ export function useGameState() {
     const [showCombatModal, setShowCombatModal] = useState(false);
     const [combatData, setCombatData] = useState(null);
 
+    // ── Deployment modal ──────────────────────────────────
+    const [deploymentUnits, setDeploymentUnits] = useState([]);
+
     // ── Event notification modal ───────────────────────────
     const [eventNotification, setEventNotification] = useState(null);
 
@@ -182,7 +185,33 @@ export function useGameState() {
         if (data.logs.length > 0) alert('夜明けフェーズ報告:\n' + data.logs.join('\n'));
         setUnits(data.units);
         setMorale(data.morale);
-        setCurrentPhase('Event');
+        const arriving = data.units.filter(u => u.status === 'arriving');
+        if (arriving.length > 0) {
+            setDeploymentUnits(arriving);
+            setCurrentPhase('Deployment');
+        } else {
+            setCurrentPhase('Event');
+        }
+    };
+
+    const DEPLOYMENT_AREAS = ['Area 30', 'Area 27', 'Area 28'];
+
+    const handleDeployUnit = (unitId, areaName) => {
+        const area = mapData.find(a => a.name === areaName);
+        if (!area) return;
+        const center = getCentroid(area.points);
+        setUnits(prev => prev.map(u => u.id === unitId ? {
+            ...u,
+            status: 'fresh',
+            location: areaName,
+            x: center.x - UNIT_SIZE / 2,
+            y: center.y - UNIT_SIZE / 2,
+        } : u));
+        setDeploymentUnits(prev => {
+            const next = prev.filter(u => u.id !== unitId);
+            if (next.length === 0) setCurrentPhase('Event');
+            return next;
+        });
     };
 
     const handleEventPhase = () => {
@@ -584,6 +613,8 @@ export function useGameState() {
         morale, supplyPoints, supplyRolled, hasBeenShaken, supportUnits,
         showCombatModal, setShowCombatModal,
         combatData,
+        deploymentUnits, DEPLOYMENT_AREAS,
+        handleDeployUnit,
         eventNotification, setEventNotification,
         fileInputRef,
         sortedUnits,

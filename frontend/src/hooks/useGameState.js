@@ -477,14 +477,41 @@ export function useGameState() {
         setContextMenu({ x: e.clientX, y: e.clientY, unitId, type: 'unit' });
     };
 
-    const handleRecoverUnit = (unitId) => {
-        if (supplyPoints < 2) { alert('Not enough supply options!'); return; }
+    const getRecoveryCost = (unit) =>
+        ['Armor', 'Tank'].includes(unit?.type) ? 3 : 2;
+
+    const getRecoveryAreas = (unit) => {
+        const division = getDivision(unit);
+        const BASE_AREAS = ['Area 1', 'Area 2', 'Area 30'];
+        const validSet = new Set(BASE_AREAS.filter(a => usControlledAreas.includes(a)));
+        if (division) {
+            const friendlies = units.filter(u =>
+                !['out_of_action', 'eliminated', 'wounded', 'future'].includes(u.status) &&
+                u.faction === 'US' && getDivision(u) === division
+            );
+            usControlledAreas.forEach(areaName => {
+                const area = mapData.find(a => a.name === areaName);
+                if (area && friendlies.some(u => isPointInPolygon(u.x + UNIT_SIZE / 2, u.y + UNIT_SIZE / 2, area.points))) {
+                    validSet.add(areaName);
+                }
+            });
+        }
+        return Array.from(validSet);
+    };
+
+    const handleRecoverUnit = (unitId, areaName) => {
         const unit = units.find(u => u.id === unitId);
         if (!unit) return;
-        const area = mapData.find(a => a.name === unit.startArea);
-        const usPos = area ? getAreaUsPosition(area) : { x: 100, y: 100 };
-        setSupplyPoints(p => p - 2);
-        setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'fresh', x: usPos.x - UNIT_SIZE / 2, y: usPos.y - UNIT_SIZE / 2 } : u));
+        const cost = getRecoveryCost(unit);
+        if (supplyPoints < cost) { alert(`補給ポイントが不足しています（必要: ${cost}）`); return; }
+        const area = mapData.find(a => a.name === areaName);
+        if (!area) return;
+        const center = getCentroid(area.points);
+        setSupplyPoints(p => p - cost);
+        setUnits(prev => prev.map(u => u.id === unitId ? {
+            ...u, status: 'fresh', location: areaName,
+            x: center.x - UNIT_SIZE / 2, y: center.y - UNIT_SIZE / 2,
+        } : u));
         setContextMenu(null);
     };
 
@@ -644,7 +671,8 @@ export function useGameState() {
         handleUnitReveal, handleCombatInitiation, handleCombatApply, handleStrategyCasualty,
         handleUnitClick, handleUnitDblClick, handleDeselect,
         handleMoveSelect, handleUnitContextMenu,
-        handleRecoverUnit, handleRemoveUnit, handleImpulseCommit,
+        handleRecoverUnit, getRecoveryCost, getRecoveryAreas,
+        handleRemoveUnit, handleImpulseCommit,
         handleToggleControl, handleAreaContextMenu,
         handleBuySupport,
         handleImageLoad, handleWheel, handleOOAHover,

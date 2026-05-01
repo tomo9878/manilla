@@ -1,6 +1,7 @@
 import { Stage, Layer, Line, Text, Group, Rect } from 'react-konva';
 import Konva from 'konva';
 import { useGameState } from './hooks/useGameState';
+import { useState } from 'react';
 import { isPointInPolygon, getCentroid } from './utils/geometry';
 import mapData from './map_data.json';
 import adjacencyData from './adjacency.json';
@@ -9,6 +10,7 @@ import MapImage from './components/MapImage';
 import LeftPanel from './components/LeftPanel';
 import RightPanel from './components/RightPanel';
 import CombatModal from './components/CombatModal';
+import { unitLabel } from './logic/unitNames';
 
 const BASE = import.meta.env.BASE_URL;
 Konva.pixelRatio = window.devicePixelRatio || 1;
@@ -16,6 +18,7 @@ Konva.pixelRatio = window.devicePixelRatio || 1;
 
 function App() {
     const gs = useGameState();
+    const [recoveryTarget, setRecoveryTarget] = useState(null);
 
     // Per-area stack index for US units: units in the same location get offset
     const usStackByLoc = {};
@@ -219,6 +222,62 @@ function App() {
                 handleBuySupport={gs.handleBuySupport}
                 handleOOAHover={gs.handleOOAHover}
             />
+
+            {/* Supply Recovery Modal */}
+            {gs.currentPhase === 'Supply' && (() => {
+                const ooa = gs.units.filter(u => u.faction === 'US' && u.status === 'out_of_action');
+                if (ooa.length === 0) return null;
+                const target = recoveryTarget ? gs.units.find(u => u.id === recoveryTarget) : null;
+                const validAreas = target ? gs.getRecoveryAreas(target) : [];
+                return (
+                    <div style={{ position: 'fixed', top: '80px', right: '320px', background: '#1e1e1e', border: '1px solid #555', borderRadius: '8px', padding: '1rem', zIndex: 500, minWidth: '260px', color: '#eee', maxHeight: '60vh', overflowY: 'auto' }}>
+                        <div style={{ fontWeight: 'bold', color: '#ffcc00', marginBottom: '0.75rem' }}>OOA部隊の回復</div>
+                        <div style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '0.75rem' }}>補給ポイント残: {gs.supplyPoints}</div>
+                        {ooa.map(u => {
+                            const cost = gs.getRecoveryCost(u);
+                            const isSelected = recoveryTarget === u.id;
+                            const canAfford = gs.supplyPoints >= cost;
+                            return (
+                                <div key={u.id} style={{ marginBottom: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', background: isSelected ? '#1a3a6a' : '#2a2a2a', borderRadius: '4px', border: `1px solid ${isSelected ? '#ffcc00' : '#444'}` }}>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#8bf' }}>{unitLabel(u)}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#888' }}>{u.type} — {cost}pt</div>
+                                        </div>
+                                        <button
+                                            onClick={() => setRecoveryTarget(isSelected ? null : u.id)}
+                                            disabled={!canAfford}
+                                            style={{ padding: '4px 10px', background: canAfford ? (isSelected ? '#ffcc00' : '#1a4a2a') : '#333', color: canAfford ? (isSelected ? '#000' : '#4f4') : '#666', border: 'none', borderRadius: '3px', cursor: canAfford ? 'pointer' : 'default', fontSize: '0.8rem' }}
+                                        >
+                                            {isSelected ? 'キャンセル' : '回復'}
+                                        </button>
+                                    </div>
+                                    {isSelected && (
+                                        <div style={{ padding: '6px 8px', background: '#111', borderRadius: '0 0 4px 4px', border: '1px solid #ffcc00', borderTop: 'none' }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#aaa', marginBottom: '4px' }}>配置先:</div>
+                                            {validAreas.length > 0 ? (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                    {validAreas.map(area => (
+                                                        <button
+                                                            key={area}
+                                                            onClick={() => { gs.handleRecoverUnit(u.id, area); setRecoveryTarget(null); }}
+                                                            style={{ padding: '4px 10px', background: '#1a4a7a', color: 'white', border: '1px solid #4a8aaa', borderRadius: '3px', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                        >
+                                                            {area}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div style={{ color: '#f88', fontSize: '0.75rem' }}>配置可能エリアなし</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            })()}
 
             {/* Deployment Modal */}
             {gs.currentPhase === 'Deployment' && gs.deploymentUnits.length > 0 && (() => {

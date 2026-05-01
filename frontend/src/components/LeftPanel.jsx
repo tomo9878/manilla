@@ -81,7 +81,7 @@ const LeftPanel = ({
                                 <div style={{ color: u.faction === 'JP' ? '#f88' : '#8bf', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {getUnitNameJa(u.id) ?? u.name}
                                 </div>
-                                <div style={{ color: '#777', fontSize: '0.8rem' }}>{u.status}</div>
+                                <div style={{ color: '#777', fontSize: '0.8rem' }}>{{ fresh: '待機', spent: '消耗', out_of_action: '行動不能', revealed: '判明', eliminated: '除去' }[u.status] ?? u.status}</div>
                             </div>
                         </div>
                         );
@@ -100,7 +100,7 @@ const LeftPanel = ({
                     onClick={handleDawnPhase}
                     style={{ width: '100%', padding: '12px', background: '#ff9800', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}
                 >
-                    Execute Dawn Phase
+                    夜明けフェーズ実行
                 </button>
             )}
 
@@ -109,7 +109,7 @@ const LeftPanel = ({
                     onClick={handleEventPhase}
                     style={{ width: '100%', padding: '12px', background: '#9c27b0', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}
                 >
-                    Roll Event
+                    イベントロール
                 </button>
             )}
 
@@ -118,7 +118,7 @@ const LeftPanel = ({
                     onClick={handleProceedToSupply}
                     style={{ width: '100%', padding: '12px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}
                 >
-                    To Supply Phase &gt;
+                    補給フェーズへ &gt;
                 </button>
             )}
 
@@ -126,7 +126,7 @@ const LeftPanel = ({
                 onClick={handleEndPhase}
                 style={{ width: '100%', padding: '12px', background: '#0066cc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
             >
-                End Phase
+                フェーズ終了
             </button>
         </div>
 

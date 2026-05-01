@@ -88,7 +88,7 @@ export function calculateCombatStats({
     const terrainBonus = { Urban: 3, Fort: 4, Clear: 2 };
     const tMod = terrainBonus[terrainType] ?? 0;
     dv += tMod;
-    logs.push(`防御値: 基本値 ${baseDf} + 地形(${terrainType}) ${tMod} = ${baseDf + tMod}  [${unitLabel(defenderUnit)}]`);
+    logs.push(`防御値: 基本値 ${baseDf} + 地形(${terrainType ?? 'なし'}) ${tMod} = ${baseDf + tMod}  [${unitLabel(defenderUnit)}]`);
 
     if (morale <= 9) {
         dv += 1;
@@ -102,5 +102,5 @@ export function calculateCombatStats({
         logs.push('防御値 精鋭: 防御に3d6（最低値除外）を使用');
     }
 
-    return { av, dv, logs };
+    return { av, dv, baseDv: baseDf, terrainMod: tMod, logs };
 }

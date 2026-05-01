@@ -21,6 +21,8 @@ const RESULT_JA = {
 export function resolveCombat({
     attackValue,
     defenseValue,
+    baseDefenseValue = null,
+    terrainMod = null,
     isElite = false,
     hasAirSupport = false,
     terrainType = null,
@@ -51,7 +53,15 @@ export function resolveCombat({
 
     const finalDv = Math.max(0, defenseValue - airReduction);
     const dtTotal = finalDv + dtRoll;
-    logs.push(`  日本軍防御合計: (基本値 ${defenseValue} - 航空 ${airReduction}) + ダイス ${dtRoll} = ${dtTotal}`);
+
+    const base  = baseDefenseValue ?? defenseValue;
+    const tMod  = terrainMod ?? 0;
+    const tLabel = terrainType ?? '';
+    if (hasAirSupport && airReduction > 0) {
+        logs.push(`  日本軍防御合計: 基本値 ${base} + 地形 ${tMod}(${tLabel}) - 航空 ${airReduction} + ダイス ${dtRoll} = ${dtTotal}`);
+    } else {
+        logs.push(`  日本軍防御合計: 基本値 ${base} + 地形 ${tMod}(${tLabel}) + ダイス ${dtRoll} = ${dtTotal}`);
+    }
 
     const diff      = atTotal - dtTotal;
     const isSuccess = diff > 0;

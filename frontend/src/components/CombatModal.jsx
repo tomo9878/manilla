@@ -178,6 +178,8 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
             const data = resolveCombat({
                 attackValue:  calculatedStats.av,
                 defenseValue: calculatedStats.dv,
+                baseDefenseValue: calculatedStats.baseDv,
+                terrainMod:   calculatedStats.terrainMod,
                 isElite:      defenderUnit.unitClass === 'Elite',
                 hasAirSupport: support.air_support,
                 terrainType:  terrain,

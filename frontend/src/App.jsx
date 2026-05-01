@@ -230,7 +230,7 @@ function App() {
                 const target = recoveryTarget ? gs.units.find(u => u.id === recoveryTarget) : null;
                 const validAreas = target ? gs.getRecoveryAreas(target) : [];
                 return (
-                    <div style={{ position: 'fixed', top: '80px', right: '320px', background: '#1e1e1e', border: '1px solid #555', borderRadius: '8px', padding: '1rem', zIndex: 500, minWidth: '260px', color: '#eee', maxHeight: '60vh', overflowY: 'auto' }}>
+                    <div style={{ position: 'fixed', top: '80px', right: 'calc(20% + 20px)', background: '#1e1e1e', border: '1px solid #555', borderRadius: '8px', padding: '1rem', zIndex: 500, minWidth: '260px', color: '#eee', maxHeight: '60vh', overflowY: 'auto' }}>
                         <div style={{ fontWeight: 'bold', color: '#ffcc00', marginBottom: '0.75rem' }}>OOA部隊の回復</div>
                         <div style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '0.75rem' }}>補給ポイント残: {gs.supplyPoints}</div>
                         {ooa.map(u => {
@@ -420,12 +420,9 @@ function App() {
                     onClick={e => e.stopPropagation()}
                 >
                     {gs.contextMenu.type === 'recover' && (
-                        <button
-                            onClick={() => gs.handleRecoverUnit(gs.contextMenu.unitId)}
-                            style={{ display: 'block', width: '100%', padding: '8px', background: '#4caf50', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '2px' }}
-                        >
-                            Recover (補給 2)
-                        </button>
+                        <div style={{ padding: '8px', color: '#aaa', fontSize: '0.85rem' }}>
+                            OOA回復は左上のモーダルから
+                        </div>
                     )}
 
                     {gs.contextMenu.type === 'area' && (() => {

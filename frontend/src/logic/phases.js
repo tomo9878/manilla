@@ -7,7 +7,7 @@ const d6 = () => Math.floor(Math.random() * 6) + 1;
 // ── Dawn Phase ────────────────────────────────────────────
 
 export function processDawnPhase({ currentTurn, units, morale }) {
-    const logs = [`--- Dawn Phase (Turn ${currentTurn}) ---`];
+    const logs = [`--- 夜明けフェーズ (ターン ${currentTurn}) ---`];
     let updatedUnits = [];
 
     for (const unit of units) {
@@ -16,10 +16,10 @@ export function processDawnPhase({ currentTurn, units, morale }) {
         // Reinforcements
         if (status === 'future') {
             if (currentTurn === 2 && (id.includes('11-') || name.includes('11th'))) {
-                logs.push(`Reinforcement Arrived: ${name} (11th Airborne)`);
+                logs.push(`増援到着: ${name} (第11空挺師団)`);
                 updatedUnits.push({ ...unit, status: 'arriving' });
             } else if (currentTurn === 6 && (id.includes('754') || name.includes('754'))) {
-                logs.push(`Reinforcement Arrived: ${name} (754th Tank)`);
+                logs.push(`増援到着: ${name} (第754戦車大隊)`);
                 updatedUnits.push({ ...unit, status: 'arriving' });
             } else {
                 updatedUnits.push(unit);
@@ -36,19 +36,19 @@ export function processDawnPhase({ currentTurn, units, morale }) {
                     continue;
                 }
                 const roll = d6();
-                logs.push(`Leader Casualty Check: ${name} (Rolled ${roll})`);
+                logs.push(`指揮官損害チェック: ${name} (ダイス ${roll})`);
                 if (roll <= 2) {
-                    logs.push('  -> Result: KIA. Removed from game.');
+                    logs.push('  -> 結果: 戦死。ゲームから除去。');
                     // omit unit (eliminated)
                 } else if (roll <= 4) {
-                    logs.push('  -> Result: Wounded. Returns next Turn.');
+                    logs.push('  -> 結果: 負傷。次ターンに復帰。');
                     updatedUnits.push({ ...unit, status: 'wounded' });
                 } else {
-                    logs.push('  -> Result: Superficial. Returns immediately!');
+                    logs.push('  -> 結果: 軽傷。即時復帰！');
                     updatedUnits.push({ ...unit, status: 'fresh' });
                 }
             } else if (status === 'wounded') {
-                logs.push(`Wounded Leader ${name} returns to duty.`);
+                logs.push(`負傷指揮官 ${name} が復帰。`);
                 updatedUnits.push({ ...unit, status: 'fresh' });
             } else {
                 updatedUnits.push(unit);
@@ -63,10 +63,10 @@ export function processDawnPhase({ currentTurn, units, morale }) {
         const withdrawIds = new Set(['1C_44A', '1C_44B', '1C_44D']);
         updatedUnits = updatedUnits.filter(unit => {
             if (!withdrawIds.has(unit.id)) return true;
-            logs.push(`Withdrawal: ${unit.name} (${unit.id}) ordered to withdraw.`);
+            logs.push(`撤退命令: ${unit.name} (${unit.id}) が撤退。`);
             if (unit.status === 'out_of_action') {
                 morale -= 1;
-                logs.push(`  -> Penalty! Unit was OOA. Morale -1 (Now ${morale}).`);
+                logs.push(`  -> ペナルティ！部隊が行動不能のまま撤退。士気 -1 (現在 ${morale})。`);
             }
             return false;
         });
@@ -80,16 +80,16 @@ export function processDawnPhase({ currentTurn, units, morale }) {
 export function processSupplyRoll({ currentTurn, currentSupply }) {
     const rolls = [d6(), d6(), d6(), d6()];
     const totalRoll = rolls.reduce((a, b) => a + b, 0);
-    const logs = [`Supply Roll (4d6): ${rolls.join('+')} = ${totalRoll}`];
+    const logs = [`補給ダイス (4d6): ${rolls.join('+')} = ${totalRoll}`];
 
     let added = totalRoll;
     if (currentTurn === 1 && totalRoll < 12) {
         added = 12;
-        logs.push(`Turn 1 Minimum Supply Rule applied: ${totalRoll} -> 12`);
+        logs.push(`ターン1最低補給ルール適用: ${totalRoll} -> 12`);
     }
 
     const newTotal = currentSupply + added;
-    logs.push(`Supply Points: ${currentSupply} + ${added} = ${newTotal}`);
+    logs.push(`補給ポイント: ${currentSupply} + ${added} = ${newTotal}`);
 
     return { roll: totalRoll, added, new_total: newTotal, logs };
 }
@@ -98,7 +98,7 @@ export function processSupplyRoll({ currentTurn, currentSupply }) {
 
 export function processBloodyStreetsCheck({ areaData }) {
     const results = [];
-    const logs = ['Checking for Bloody Streets (Urban/Fort + Contested)...'];
+    const logs = ['血の街路チェック中 (市街地/要塞 + 交戦エリア)...'];
 
     for (const area of areaData) {
         const { terrain, us_count = 0, jp_count = 0 } = area;
@@ -106,24 +106,24 @@ export function processBloodyStreetsCheck({ areaData }) {
 
         const roll = d6();
         if (roll <= 2) {
-            logs.push(`Bloody Streets in ${area.name}: Rolled ${roll} -> No Effect`);
+            logs.push(`血の街路 ${area.name}: ダイス ${roll} -> 効果なし`);
         } else if (roll <= 4) {
-            logs.push(`Bloody Streets in ${area.name}: Rolled ${roll} -> US takes 1 OOA!`);
+            logs.push(`血の街路 ${area.name}: ダイス ${roll} -> 米軍1部隊が行動不能！`);
             results.push({ area: area.name, roll, effect: 'OOA', required_ooa: 1, morale_penalty: 0 });
         } else {
-            logs.push(`Bloody Streets in ${area.name}: Rolled ${roll} -> US takes 1 OOA and Morale -1!`);
-            results.push({ area: area.name, roll, effect: 'OOA + Morale -1', required_ooa: 1, morale_penalty: 1 });
+            logs.push(`血の街路 ${area.name}: ダイス ${roll} -> 米軍1部隊が行動不能かつ士気 -1！`);
+            results.push({ area: area.name, roll, effect: 'OOA + 士気 -1', required_ooa: 1, morale_penalty: 1 });
         }
     }
 
-    if (results.length === 0) logs.push('No Bloody Streets casualties occurred.');
+    if (results.length === 0) logs.push('血の街路による損害なし。');
     return { results, logs };
 }
 
 // ── End of Combat Phase ───────────────────────────────────
 
 export function processEndCombatPhase({ units, morale }) {
-    const logs = ['--- End of Combat Phase ---'];
+    const logs = ['--- 戦闘フェーズ終了 ---'];
     let flipCount = 0;
 
     const updatedUnits = units.map(u => {
@@ -134,9 +134,9 @@ export function processEndCombatPhase({ units, morale }) {
         return u;
     });
 
-    logs.push(`Reset ${flipCount} Spent units to Fresh.`);
+    logs.push(`消耗 ${flipCount} 部隊を新鮮に回復。`);
     const newMorale = morale - 1;
-    logs.push(`Morale Check: ${morale} -> ${newMorale} (-1 for Phase End)`);
+    logs.push(`士気チェック: ${morale} -> ${newMorale} (-1 フェーズ終了)`);
 
     return { units: updatedUnits, morale: newMorale, logs };
 }

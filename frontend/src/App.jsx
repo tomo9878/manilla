@@ -1,4 +1,4 @@
-import { Stage, Layer, Line, Text, Group, Rect, Circle } from 'react-konva';
+import { Stage, Layer, Line, Text, Group, Rect } from 'react-konva';
 import Konva from 'konva';
 import { useGameState } from './hooks/useGameState';
 import { isPointInPolygon, getCentroid } from './utils/geometry';
@@ -13,20 +13,20 @@ import CombatModal from './components/CombatModal';
 const BASE = import.meta.env.BASE_URL;
 Konva.pixelRatio = window.devicePixelRatio || 1;
 
-const STACK_THRESHOLD = 40;
 
 function App() {
     const gs = useGameState();
 
-    // Stack index map for render order (O(N²) but N≈50)
-    const stackMap = {};
+    // Per-area stack index for US units: units in the same location get offset
+    const usStackByLoc = {};
     gs.sortedUnits.forEach(u => {
-        stackMap[u.id] = gs.sortedUnits.filter(o =>
-            o.id !== u.id &&
-            Math.abs(o.x - u.x) < STACK_THRESHOLD &&
-            Math.abs(o.y - u.y) < STACK_THRESHOLD &&
-            o.id < u.id
-        ).length;
+        if (u.faction !== 'US') return;
+        if (!usStackByLoc[u.location]) usStackByLoc[u.location] = [];
+        usStackByLoc[u.location].push(u.id);
+    });
+    const usStackIdx = {};
+    Object.values(usStackByLoc).forEach(ids => {
+        ids.forEach((id, i) => { usStackIdx[id] = i; });
     });
 
     return (
@@ -38,7 +38,8 @@ function App() {
                 units={gs.units}
                 currentPhase={gs.currentPhase}
                 currentEvent={gs.currentEvent}
-                handleStartGame={gs.handleStartGame}
+                selectedUnitId={gs.selectedUnitId}
+                handleUnitClick={gs.handleUnitClick}
                 handleDawnPhase={gs.handleDawnPhase}
                 handleEventPhase={gs.handleEventPhase}
                 handleProceedToSupply={gs.handleProceedToSupply}
@@ -50,37 +51,6 @@ function App() {
 
             {/* CENTER PANEL */}
             <div style={{ flex: '0 0 60%', position: 'relative', background: '#333', overflow: 'hidden' }}>
-
-                {/* Hovered stack tooltip */}
-                {gs.hoveredStack && (
-                    <div style={{
-                        position: 'absolute',
-                        top: gs.hoveredStack.pointer.y + 20,
-                        left: gs.hoveredStack.pointer.x + 20,
-                        zIndex: 100, pointerEvents: 'none',
-                        background: 'rgba(0,0,0,0.85)',
-                        padding: '8px', borderRadius: '6px', border: '1px solid #999',
-                        display: 'flex', flexDirection: 'row', gap: '8px',
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
-                    }}>
-                        {gs.hoveredStack.units.map(stackUnit => {
-                            const u = gs.units.find(live => live.id === stackUnit.id) || stackUnit;
-                            if (['out_of_action', 'eliminated', 'future'].includes(u.status)) return null;
-                            return (
-                                <div key={u.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <img
-                                        src={`${BASE}images/${((u.status === 'spent' || u.status === 'revealed') && u.backImage) ? u.backImage : u.frontImage}`}
-                                        alt={u.id}
-                                        style={{ width: '100px', height: '100px', borderRadius: '4px' }}
-                                    />
-                                    <div style={{ color: '#eee', fontSize: '0.75rem', marginTop: '4px', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {u.status === 'hidden' ? 'Hidden' : u.name}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
 
                 {/* Bloody Streets banner */}
                 {gs.bloodyStreetsQueue.length > 0 && (
@@ -122,7 +92,7 @@ function App() {
                     }}
                 >
                     <Layer imageSmoothingEnabled={false}>
-                        <Rect x={-5000} y={-5000} width={10000} height={10000} fill="#333" />
+                        <Rect x={-5000} y={-5000} width={10000} height={10000} fill="#333" onClick={gs.handleDeselect} />
 
                         <MapImage onImageLoad={gs.handleImageLoad} />
 
@@ -170,6 +140,8 @@ function App() {
                                             gs.handleMoveSelect(area.name);
                                         } else if (gs.currentPhase === 'Combat') {
                                             gs.handleCombatInitiation(area.name);
+                                        } else if (gs.selectedUnitId) {
+                                            gs.handleDeselect();
                                         }
                                     }}
                                     listening
@@ -178,26 +150,29 @@ function App() {
                         })}
 
                         {/* Units */}
-                        {gs.sortedUnits.map(unit => (
-                            <UnitCounter
-                                key={unit.id}
-                                unit={unit}
-                                x={unit.x} y={unit.y}
-                                isSelected={unit.id === gs.selectedUnitId}
-                                onDragStart={gs.handleUnitDragStart}
-                                onDragEnd={gs.handleUnitDragEnd}
-                                onClick={gs.handleUnitClick}
-                                onDblClick={gs.handleUnitDblClick}
-                                onHover={gs.handleUnitHover}
-                                onContextMenu={gs.handleUnitContextMenu}
-                            />
-                        ))}
+                        {gs.sortedUnits.map(unit => {
+                            const si = unit.faction === 'US' ? (usStackIdx[unit.id] ?? 0) : 0;
+                            return (
+                                <UnitCounter
+                                    key={unit.id}
+                                    unit={unit}
+                                    x={unit.x + si * 8}
+                                    y={unit.y - si * 8}
+                                    isSelected={unit.id === gs.selectedUnitId}
+                                    onClick={gs.handleUnitClick}
+                                    onDblClick={gs.handleUnitDblClick}
+                                    onContextMenu={gs.handleUnitContextMenu}
+                                />
+                            );
+                        })}
 
-                        {/* Movement option circles */}
+                        {/* Movement destination buttons */}
                         {gs.movementOptions.map(areaName => {
                             const area = mapData.find(a => a.name === areaName);
                             if (!area) return null;
                             const center = getCentroid(area.points);
+                            const btnW = 110;
+                            const btnH = 32;
                             return (
                                 <Group
                                     key={`move-${areaName}`}
@@ -206,8 +181,19 @@ function App() {
                                     onMouseEnter={() => { document.body.style.cursor = 'pointer'; }}
                                     onMouseLeave={() => { document.body.style.cursor = 'default'; }}
                                 >
-                                    <Circle x={center.x} y={center.y} radius={30} fill="rgba(0,255,0,0.4)" stroke="lime" strokeWidth={2} />
-                                    <Text x={center.x - 20} y={center.y - 6} text="MOVE" fontSize={12} fill="white" fontStyle="bold" width={40} align="center" listening={false} />
+                                    <Rect
+                                        x={center.x - btnW / 2} y={center.y - btnH / 2}
+                                        width={btnW} height={btnH}
+                                        fill="rgba(0,180,0,0.85)" stroke="lime" strokeWidth={2}
+                                        cornerRadius={4}
+                                    />
+                                    <Text
+                                        x={center.x - btnW / 2} y={center.y - 8}
+                                        text={areaName} fontSize={14}
+                                        fill="white" fontStyle="bold"
+                                        width={btnW} align="center"
+                                        listening={false}
+                                    />
                                 </Group>
                             );
                         })}
@@ -245,8 +231,81 @@ function App() {
                     defenderUnit={gs.combatData.defenderUnit}
                     terrain={gs.combatData.terrain}
                     morale={gs.morale}
+                    supportUnits={gs.supportUnits}
                 />
             )}
+
+            {/* Event Notification Modal */}
+            {gs.eventNotification && (() => {
+                const { event, logs } = gs.eventNotification;
+                const TYPE_COLOR = {
+                    'Japanese Attack':           '#c0392b',
+                    'Japanese Offensive':        '#e67e22',
+                    'Pause':                     '#2980b9',
+                    'Mandatory Attack Priority': '#8e44ad',
+                    'No Result':                 '#555',
+                };
+                const accentColor = TYPE_COLOR[event.type] ?? '#555';
+                return (
+                    <div style={{
+                        position: 'fixed', inset: 0, zIndex: 2000,
+                        background: 'rgba(0,0,0,0.75)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        <div style={{
+                            background: '#1a1a1a', border: `2px solid ${accentColor}`,
+                            borderRadius: '10px', padding: '28px 32px', maxWidth: '480px', width: '90%',
+                            boxShadow: `0 0 30px ${accentColor}66`, color: '#eee',
+                        }}>
+                            {/* header */}
+                            <div style={{ fontSize: '0.75rem', color: '#888', marginBottom: '4px', letterSpacing: '0.08em' }}>
+                                ランダムイベント・フェーズ
+                            </div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: accentColor, marginBottom: '12px', borderBottom: `1px solid ${accentColor}55`, paddingBottom: '8px' }}>
+                                {event.ja_name}
+                            </div>
+
+                            {/* dice */}
+                            <div style={{ fontSize: '0.9rem', color: '#aaa', marginBottom: '14px' }}>
+                                ダイス: {event.rolls?.join(' + ')} = <strong style={{ color: '#fff' }}>{event.roll}</strong>
+                            </div>
+
+                            {/* effect description */}
+                            <div style={{
+                                background: '#2a2a2a', borderRadius: '6px', padding: '12px 14px',
+                                borderLeft: `3px solid ${accentColor}`, marginBottom: '14px',
+                                fontSize: '0.9rem', lineHeight: '1.6',
+                            }}>
+                                <div style={{ fontSize: '0.7rem', color: '#888', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>効果</div>
+                                {event.effect_desc}
+                            </div>
+
+                            {/* morale change */}
+                            {event.moraleChange < 0 && (
+                                <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '12px', fontSize: '0.95rem' }}>
+                                    ⚠ 士気変動: {event.moraleChange} (現在 {gs.morale})
+                                </div>
+                            )}
+
+                            {/* log */}
+                            <div style={{ maxHeight: '100px', overflowY: 'auto', fontSize: '0.78rem', color: '#777', marginBottom: '18px', fontFamily: 'monospace' }}>
+                                {logs.map((l, i) => <div key={i}>{l}</div>)}
+                            </div>
+
+                            <button
+                                onClick={() => gs.setEventNotification(null)}
+                                style={{
+                                    width: '100%', padding: '10px', background: accentColor,
+                                    color: 'white', border: 'none', borderRadius: '6px',
+                                    cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem',
+                                }}
+                            >
+                                了解
+                            </button>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Context Menu */}
             {gs.contextMenu && (

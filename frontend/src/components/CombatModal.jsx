@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import './CombatModal.css';
 import { calculateCombatStats } from '../logic/combatCalc';
 import { resolveCombat } from '../logic/combatResolution';
+import { unitLabel } from '../logic/unitNames';
 
 /**
  * CombatModal
@@ -17,7 +18,7 @@ import { resolveCombat } from '../logic/combatResolution';
  * - morale: number
  * - currentTurn: number (NEW)
  */
-const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerUnits = [], defenderUnit, terrain = 'Clear', morale = 19, currentTurn = 1 }) => {
+const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerUnits = [], defenderUnit, terrain = 'Clear', morale = 19, currentTurn = 1, supportUnits = {} }) => {
     // Steps: 'CONTACT' -> 'STRATEGY' -> 'SETUP' -> 'RESOLUTION' -> 'RESULT'
     const [step, setStep] = useState('CONTACT');
 
@@ -70,39 +71,41 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         setTimeout(() => processDefenseStrategy(), 1000);
     };
 
+    const STRATEGY_JA = { Ambush: '待ち伏せ', Sniper: '狙撃', Barrage: '砲撃', Fanatic: '狂信', Elite: '精鋭', Infantry: '歩兵' };
+
     const processDefenseStrategy = () => {
         if (!defenderUnit) return;
 
         const strategy = defenderUnit.unitClass;
         const leadUnit = activeAttackers.find(u => u.id === selectedLeadId);
         let newAttackers = [...activeAttackers];
-        let strategyLog = `Strategy: ${strategy}`;
+        let strategyLog = `防衛戦略: ${STRATEGY_JA[strategy] ?? strategy}`;
         let removedId = null;
 
         if (strategy === 'Ambush') {
             if (leadUnit) {
-                strategyLog += ` -> Ambush! Lead Unit ${leadUnit.name} Eliminated (OOA).`;
+                strategyLog += ` -> 待ち伏せ！先導部隊 ${unitLabel(leadUnit)} を除去 (行動不能)。`;
                 removedId = leadUnit.id;
             }
         } else if (strategy === 'Sniper') {
             const leaders = newAttackers.filter(u => isLeader(u));
             if (leaders.length > 0) {
                 const target = leaders[0];
-                strategyLog += ` -> Sniper! Leader ${target.name} Eliminated (OOA).`;
+                strategyLog += ` -> 狙撃！指揮官 ${unitLabel(target)} を除去 (行動不能)。`;
                 removedId = target.id;
             } else {
-                strategyLog += " -> Sniper (No effect, no leader).";
+                strategyLog += ' -> 狙撃 (効果なし、指揮官不在)。';
             }
         } else if (strategy === 'Barrage') {
             if (newAttackers.length > 0) {
                 const target = newAttackers[newAttackers.length - 1]; // Last unit
-                strategyLog += ` -> Barrage! Unit ${target.name} Eliminated (OOA).`;
+                strategyLog += ` -> 砲撃！部隊 ${unitLabel(target)} を除去 (行動不能)。`;
                 removedId = target.id;
             }
         } else if (strategy === 'Fanatic') {
-            strategyLog += " -> Fanatic! (Success -> Stalemate)";
+            strategyLog += ' -> 狂信的！(成功 -> 膠着)';
         } else if (strategy === 'Elite') {
-            strategyLog += " -> Elite! (Defends with 3d6 drop low)";
+            strategyLog += ' -> 精鋭！(3d6最低値除外で防衛)';
         }
 
         if (removedId) {
@@ -123,15 +126,27 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         addLog(strategyLog, 'danger');
 
         if (newAttackers.length === 0) {
-            addLog("All attacking units eliminated by Strategy.", 'danger');
+            addLog('全攻撃部隊が防衛戦略により除去。', 'danger');
             setStep('RESULT');
-            // Even if all eliminated, we might need to apply result (resultType Repulse/Stalemate equivalent?)
-            // Technically combat ends immediately.
-            // Result should be treated as Repulse or specialized 'StrategyElimination'.
-            setCombatResult({ resultTypeActual: 'Repulse', logs: ["Combat ended by Strategy Casualty."] });
+            setCombatResult({ resultTypeActual: 'Repulse', logs: ['防衛戦略損害により戦闘終了。'] });
         } else {
             setTimeout(() => setStep('SETUP'), 1500);
         }
+    };
+
+    const handleSupportCycle = (type) => {
+        if (step === 'RESULT') return;
+        setSupport(prev => {
+            if (type === 'air_support') {
+                const avail = supportUnits?.air?.available ?? 0;
+                if (!prev.air_support && avail === 0) return prev;
+                return { ...prev, air_support: !prev.air_support };
+            }
+            const avail = supportUnits?.[type]?.available ?? 0;
+            if (avail === 0) return prev;
+            const next = (prev[type] + 1) % (avail + 1);
+            return { ...prev, [type]: next };
+        });
     };
 
     const recalculate = () => {
@@ -171,7 +186,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
             // Check Fanatic Rule
             if (defenderUnit.unitClass === 'Fanatic' && data.is_success && !data.is_overrun) {
                 data.is_success = false;
-                data.logs.push("Fanatic Defense! Success converted to Stalemate.");
+                data.logs.push('狂信的防衛！成功が膠着に変換。');
                 data.resultTypeActual = 'Stalemate';
             } else {
                 if (data.is_overrun) data.resultTypeActual = 'Overrun';
@@ -192,7 +207,8 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
             }
 
             setCombatResult(data);
-            addLog(`Result: ${data.resultTypeActual} (Diff ${data.diff})`, 'result');
+            const RESULT_JA = { Success: '成功', Repulse: '撃退', Stalemate: '膠着', Overrun: '突破' };
+            addLog(`結果: ${RESULT_JA[data.resultTypeActual] ?? data.resultTypeActual} (差分 ${data.diff})`, 'result');
             setStep('RESULT');
 
         } catch (e) {
@@ -210,7 +226,8 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                 defenderUnit: isRevealed ? { ...defenderUnit, status: 'revealed' } : defenderUnit,
                 targetArea: "Combat Area",
                 currentMorale: morale,
-                strategyCasualtyIds: strategyCasualtyIds
+                strategyCasualtyIds: strategyCasualtyIds,
+                supportUsed: support,
             });
         }
         onClose();
@@ -283,7 +300,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                                         {u.type === 'Tank' ? 'Tk' : isLeader(u) ? 'HQ' : 'Inf'}
                                     </div>
                                     <div className="unit-info">
-                                        <div className="unit-name">{u.name}</div>
+                                        <div className="unit-name">{unitLabel(u)}</div>
                                         <div className="unit-stats">攻撃: {u.attack_factor} {u.id === selectedLeadId ? '(先導)' : ''}</div>
                                     </div>
                                 </div>
@@ -300,15 +317,37 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                                     </div>
                                 )}
                                 <div className="modifiers-grid">
-                                    <button className={`mod-btn ${support.artillery > 0 ? 'active' : ''}`} onClick={() => handleSupportCycle('artillery')}>
-                                        砲兵 x{support.artillery}
-                                    </button>
-                                    <button className={`mod-btn ${support.engineer > 0 ? 'active' : ''}`} onClick={() => handleSupportCycle('engineer')}>
-                                        工兵 x{support.engineer}
-                                    </button>
-                                    <button className={`mod-btn ${support.air_support ? 'active' : ''}`} onClick={() => handleSupportCycle('air_support')}>
-                                        航空 {support.air_support ? 'ON' : 'OFF'}
-                                    </button>
+                                    {(() => {
+                                        const artyAvail = supportUnits?.artillery?.available ?? 0;
+                                        const engAvail  = supportUnits?.engineer?.available  ?? 0;
+                                        const airAvail  = supportUnits?.air?.available       ?? 0;
+                                        return (<>
+                                            <button
+                                                className={`mod-btn ${support.artillery > 0 ? 'active' : ''}`}
+                                                onClick={() => handleSupportCycle('artillery')}
+                                                disabled={artyAvail === 0 && support.artillery === 0}
+                                                title={`在庫: ${artyAvail}`}
+                                            >
+                                                砲兵 {support.artillery}/{artyAvail}
+                                            </button>
+                                            <button
+                                                className={`mod-btn ${support.engineer > 0 ? 'active' : ''}`}
+                                                onClick={() => handleSupportCycle('engineer')}
+                                                disabled={engAvail === 0 && support.engineer === 0}
+                                                title={`在庫: ${engAvail}`}
+                                            >
+                                                工兵 {support.engineer}/{engAvail}
+                                            </button>
+                                            <button
+                                                className={`mod-btn ${support.air_support ? 'active' : ''}`}
+                                                onClick={() => handleSupportCycle('air_support')}
+                                                disabled={airAvail === 0 && !support.air_support}
+                                                title={`在庫: ${airAvail}`}
+                                            >
+                                                航空 {support.air_support ? 'ON' : 'OFF'}
+                                            </button>
+                                        </>);
+                                    })()}
                                 </div>
                                 <div className="stats-display">
                                     <div className="stat-label">総攻撃力 (AV)</div>
@@ -361,7 +400,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                                 <div className="unit-card">
                                     <div className="unit-card-icon" style={{ background: '#c53030' }}>JP</div>
                                     <div className="unit-info">
-                                        <div className="unit-name">{defenderUnit.name}</div>
+                                        <div className="unit-name">{unitLabel(defenderUnit)}</div>
                                         <div className="unit-stats">防御: {defenderUnit.strength} / {defenderUnit.unitClass}</div>
                                     </div>
                                 </div>

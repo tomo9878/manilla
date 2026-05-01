@@ -6,7 +6,7 @@ import adjacencyData from '../adjacency.json';
 import { applyCombatResult } from '../logic/combatResolution';
 import { processDawnPhase, processSupplyRoll, processBloodyStreetsCheck } from '../logic/phases';
 import { processRandomEvent } from '../logic/events';
-import { isPointInPolygon, getCentroid } from '../utils/geometry';
+import { isPointInPolygon, getCentroid, getAreaUsPosition } from '../utils/geometry';
 
 const UNIT_SIZE = 100;
 
@@ -23,7 +23,6 @@ export function useGameState() {
     // ── Game entities ─────────────────────────────────────
     const [units, setUnits] = useState([]);
     const [selectedArea, setSelectedArea] = useState(null);
-    const [hoveredStack, setHoveredStack] = useState(null);
     const [usControlledAreas, setUsControlledAreas] = useState(['Area 1', 'Area 2', 'Area 30']);
     const [validRecoveryAreas, setValidRecoveryAreas] = useState([]);
     const [contextMenu, setContextMenu] = useState(null);
@@ -57,13 +56,15 @@ export function useGameState() {
     const [showCombatModal, setShowCombatModal] = useState(false);
     const [combatData, setCombatData] = useState(null);
 
+    // ── Event notification modal ───────────────────────────
+    const [eventNotification, setEventNotification] = useState(null);
+
     const fileInputRef = useRef(null);
 
     // ── Effects ───────────────────────────────────────────
 
-    useEffect(() => {
-        setUnits([]); // Start with empty board; user presses Start Game
-    }, []);
+    // Auto-start on mount — no manual Start Game needed
+    useEffect(() => { handleStartGame(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (morale <= 9 && !hasBeenShaken) setHasBeenShaken(true);
@@ -82,6 +83,18 @@ export function useGameState() {
         });
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setSelectedUnitId(null);
+                setMovementOptions([]);
+                setActiveArea(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
     // ── Helpers ───────────────────────────────────────────
@@ -115,11 +128,11 @@ export function useGameState() {
                 return;
             }
             const area = mapData.find(a => a.name === u.startArea);
-            const center = area ? getCentroid(area.points) : { x: 2800, y: 500 };
+            const usPos = area ? getAreaUsPosition(area) : { x: 2800, y: 500 };
             newUnits.push({
                 ...u,
-                x: center.x - UNIT_SIZE / 2,
-                y: center.y - UNIT_SIZE / 2,
+                x: usPos.x - UNIT_SIZE / 2,
+                y: usPos.y - UNIT_SIZE / 2,
                 status: 'fresh',
                 location: u.startArea,
             });
@@ -179,13 +192,8 @@ export function useGameState() {
         });
         setCurrentEvent(data.event);
         setLastEvent(data.event);
-        if (data.morale !== morale) {
-            setMorale(data.morale);
-            setTimeout(() => alert(`Morale Change: Now ${data.morale}`), 100);
-        }
-        if (data.logs.length > 0) {
-            setTimeout(() => alert('イベント結果:\n' + data.event.name + '\n\n' + data.logs.join('\n')), 200);
-        }
+        if (data.morale !== morale) setMorale(data.morale);
+        setEventNotification({ event: data.event, logs: data.logs });
     };
 
     const handleProceedToSupply = () => setCurrentPhase('Supply');
@@ -330,7 +338,25 @@ export function useGameState() {
             setUsControlledAreas(prev => Array.from(new Set([...prev, combatData.areaName])));
         }
         setUnits(prev => prev.map(u => updatedIds.has(u.id) ? { ...u, ...updates[u.id] } : u));
-        if (result.isOverrun || result.is_overrun) alert('OVERRUN! Attackers remain Fresh and can continue action.');
+
+        // Consume support units used in this combat
+        const s = result.supportUsed;
+        if (s) {
+            setSupportUnits(prev => ({
+                ...prev,
+                artillery: { ...prev.artillery,
+                    available: Math.max(0, prev.artillery.available - (s.artillery ?? 0)),
+                    used:      prev.artillery.used + (s.artillery ?? 0) },
+                engineer:  { ...prev.engineer,
+                    available: Math.max(0, prev.engineer.available - (s.engineer ?? 0)),
+                    used:      prev.engineer.used + (s.engineer ?? 0) },
+                air:       { ...prev.air,
+                    available: Math.max(0, prev.air.available - (s.air_support ? 1 : 0)),
+                    used:      prev.air.used + (s.air_support ? 1 : 0) },
+            }));
+        }
+
+        if (result.isOverrun || result.is_overrun) alert('突破！攻撃部隊は消耗せず行動継続可能。');
         setShowCombatModal(false);
         setCombatData(null);
     };
@@ -368,10 +394,11 @@ export function useGameState() {
         setUnits(units.map(u => u.id === id ? { ...u, status: u.status === 'fresh' ? 'spent' : 'fresh' } : u));
     };
 
-    const handleUnitDragStart = (id) => setSelectedUnitId(id);
-
-    const handleUnitDragEnd = (id, newX, newY) => {
-        const area = mapData.find(a => isPointInPolygon(newX, newY, a.points));
+    const applyUnitMove = (id, newX, newY) => {
+        // Check both the top-left corner and center of the unit to find the area
+        const cx = newX + UNIT_SIZE / 2, cy = newY + UNIT_SIZE / 2;
+        const area = mapData.find(a => isPointInPolygon(cx, cy, a.points))
+                  ?? mapData.find(a => isPointInPolygon(newX, newY, a.points));
         const locationName = area?.name ?? 'Unknown';
         setUnits(prev => {
             const next = prev.map(u => u.id === id ? { ...u, x: newX, y: newY, location: locationName } : u);
@@ -383,25 +410,21 @@ export function useGameState() {
         });
     };
 
+    const handleDeselect = () => {
+        setSelectedUnitId(null);
+        setMovementOptions([]);
+        setActiveArea(null);
+    };
+
     const handleMoveSelect = (targetAreaName) => {
         if (!selectedUnitId) return;
         const area = mapData.find(a => a.name === targetAreaName);
         if (!area) return;
-        const { x, y } = getCentroid(area.points);
-        handleUnitDragEnd(selectedUnitId, x - UNIT_SIZE / 2, y - UNIT_SIZE / 2);
+        const usPos = getAreaUsPosition(area);
+        applyUnitMove(selectedUnitId, usPos.x - UNIT_SIZE / 2, usPos.y - UNIT_SIZE / 2);
         setSelectedUnitId(null);
         setMovementOptions([]);
-    };
-
-    const handleUnitHover = (unit, isHovering, pointer) => {
-        if (!isHovering) { setHoveredStack(null); return; }
-        const threshold = UNIT_SIZE;
-        const nearby = units.filter(u =>
-            !['out_of_action', 'eliminated', 'future'].includes(u.status) &&
-            Math.abs(u.x - unit.x) < threshold && Math.abs(u.y - unit.y) < threshold
-        );
-        if (nearby.length > 1) setHoveredStack({ units: nearby, pointer });
-        else setHoveredStack(null);
+        setActiveArea(null);
     };
 
     const handleUnitContextMenu = (e, unitId) => {
@@ -413,9 +436,9 @@ export function useGameState() {
         const unit = units.find(u => u.id === unitId);
         if (!unit) return;
         const area = mapData.find(a => a.name === unit.startArea);
-        const center = area ? getCentroid(area.points) : { x: 100, y: 100 };
+        const usPos = area ? getAreaUsPosition(area) : { x: 100, y: 100 };
         setSupplyPoints(p => p - 2);
-        setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'fresh', x: center.x - UNIT_SIZE / 2, y: center.y - UNIT_SIZE / 2 } : u));
+        setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'fresh', x: usPos.x - UNIT_SIZE / 2, y: usPos.y - UNIT_SIZE / 2 } : u));
         setContextMenu(null);
     };
 
@@ -551,7 +574,6 @@ export function useGameState() {
         stageSize, scale, position, setPosition, setScale,
         units, setUnits,
         selectedArea, setSelectedArea,
-        hoveredStack,
         usControlledAreas, validRecoveryAreas,
         contextMenu, setContextMenu,
         contestedAreas,
@@ -562,6 +584,7 @@ export function useGameState() {
         morale, supplyPoints, supplyRolled, hasBeenShaken, supportUnits,
         showCombatModal, setShowCombatModal,
         combatData,
+        eventNotification, setEventNotification,
         fileInputRef,
         sortedUnits,
         // handlers
@@ -571,8 +594,8 @@ export function useGameState() {
         handleEndTurn, handleProceedToCombat, handleBloodyStreetsSelection,
         handleEndPhase,
         handleUnitReveal, handleCombatInitiation, handleCombatApply, handleStrategyCasualty,
-        handleUnitClick, handleUnitDblClick, handleUnitDragStart, handleUnitDragEnd,
-        handleMoveSelect, handleUnitHover, handleUnitContextMenu,
+        handleUnitClick, handleUnitDblClick, handleDeselect,
+        handleMoveSelect, handleUnitContextMenu,
         handleRecoverUnit, handleRemoveUnit, handleImpulseCommit,
         handleToggleControl, handleAreaContextMenu,
         handleBuySupport,

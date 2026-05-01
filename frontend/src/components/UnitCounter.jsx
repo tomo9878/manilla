@@ -4,7 +4,7 @@ import useImage from 'use-image';
 const BASE = import.meta.env.BASE_URL;
 const UNIT_SIZE = 100;
 
-const UnitCounter = ({ unit, x, y, isSelected, onDragStart, onDragEnd, onClick, onDblClick, onHover, onContextMenu }) => {
+const UnitCounter = ({ unit, x, y, isSelected, onClick, onDblClick, onContextMenu }) => {
     const [frontImg] = useImage(`${BASE}images/${unit.frontImage}`);
     const [backImg] = useImage(unit.backImage ? `${BASE}images/${unit.backImage}` : null);
 
@@ -15,17 +15,10 @@ const UnitCounter = ({ unit, x, y, isSelected, onDragStart, onDragEnd, onClick, 
         <Group
             x={x}
             y={y}
-            draggable={unit.status !== 'spent'}
-            onDragStart={() => onDragStart && onDragStart(unit.id)}
-            onDragEnd={(e) => onDragEnd(unit.id, e.target.x(), e.target.y())}
             onClick={(e) => { e.cancelBubble = true; onClick && onClick(unit.id); }}
             onContextMenu={(e) => { e.evt.preventDefault(); onContextMenu && onContextMenu(e.evt, unit.id); }}
             onDblClick={(e) => { e.cancelBubble = true; onDblClick && onDblClick(unit.id); }}
-            onMouseEnter={(e) => {
-                const pointer = e.target.getStage().getPointerPosition();
-                onHover && onHover(unit, true, pointer);
-            }}
-            onMouseLeave={() => onHover && onHover(unit, false)}
+
         >
             <Rect width={UNIT_SIZE} height={UNIT_SIZE} fill="black" opacity={0.3} offsetX={-3} offsetY={-3} />
             <Rect

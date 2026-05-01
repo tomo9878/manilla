@@ -4,7 +4,8 @@ const BASE = import.meta.env.BASE_URL;
 
 const LeftPanel = ({
     selectedArea, adjacencyData, units, currentPhase, currentEvent,
-    handleStartGame, handleDawnPhase, handleEventPhase, handleProceedToSupply, handleEndPhase,
+    selectedUnitId, handleUnitClick,
+    handleDawnPhase, handleEventPhase, handleProceedToSupply, handleEndPhase,
     handleSaveGame, handleLoadGame, fileInputRef,
 }) => (
     <div style={{
@@ -55,12 +56,22 @@ const LeftPanel = ({
             <div style={{ overflowY: 'auto', maxHeight: '220px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {units
                     .filter(u => !['eliminated', 'future'].includes(u.status) && (selectedArea ? u.location === selectedArea.name : true))
-                    .map(u => (
-                        <div key={u.id} style={{
+                    .map(u => {
+                        const isSelectable = currentPhase === 'Action' && u.faction === 'US' && u.status === 'fresh';
+                        const isSelected = u.id === selectedUnitId;
+                        return (
+                        <div key={u.id}
+                            onClick={() => { if (isSelectable) handleUnitClick(u.id); }}
+                            style={{
                             display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '6px 8px', background: '#2a2a2a', borderRadius: '3px',
-                            border: `1px solid ${u.faction === 'JP' ? '#7a2020' : '#1a4a7a'}`,
+                            padding: '6px 8px',
+                            background: isSelected ? '#1a3a6a' : '#2a2a2a',
+                            borderRadius: '3px',
+                            border: `2px solid ${isSelected ? '#ffcc00' : (u.faction === 'JP' ? '#7a2020' : '#1a4a7a')}`,
                             opacity: u.status === 'out_of_action' ? 0.5 : 1,
+                            cursor: isSelectable ? 'pointer' : 'default',
+                            boxShadow: isSelected ? '0 0 8px rgba(255,204,0,0.4)' : 'none',
+                            transition: 'border 0.15s, background 0.15s, box-shadow 0.15s',
                         }}>
                             <img src={`${BASE}images/${u.frontImage}`} alt={u.id} style={{ width: '42px', height: '42px', borderRadius: '2px', flexShrink: 0 }} />
                             <div style={{ fontSize: '0.875rem', overflow: 'hidden' }}>
@@ -73,7 +84,8 @@ const LeftPanel = ({
                                 <div style={{ color: '#777', fontSize: '0.8rem' }}>{u.status}</div>
                             </div>
                         </div>
-                    ))
+                        );
+                    })
                 }
                 {units.filter(u => !['eliminated', 'future'].includes(u.status) && (selectedArea ? u.location === selectedArea.name : true)).length === 0 && (
                     <div style={{ color: '#666', fontStyle: 'italic', fontSize: '0.8rem' }}>ユニットなし</div>
@@ -83,13 +95,6 @@ const LeftPanel = ({
 
         {/* フェーズボタン */}
         <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-            <button
-                onClick={handleStartGame}
-                style={{ width: '100%', padding: '12px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
-            >
-                Start Game
-            </button>
-
             {currentPhase === 'Dawn' && (
                 <button
                     onClick={handleDawnPhase}

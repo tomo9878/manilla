@@ -19,3 +19,24 @@ export function getCentroid(points) {
     }
     return { x: x / n, y: y / n };
 }
+
+// Returns a position inside the area polygon for US units,
+// offset from the centroid (JP unit position) so they don't overlap.
+export function getAreaUsPosition(area) {
+    const centroid = getCentroid(area.points);
+    const D = 115; // ~one unit width (100) + gap
+    const candidates = [
+        { x: centroid.x,            y: centroid.y - D },       // above
+        { x: centroid.x + D,        y: centroid.y },           // right
+        { x: centroid.x - D,        y: centroid.y },           // left
+        { x: centroid.x,            y: centroid.y + D },       // below
+        { x: centroid.x + D * 0.7,  y: centroid.y - D * 0.7 },// top-right
+        { x: centroid.x - D * 0.7,  y: centroid.y - D * 0.7 },// top-left
+        { x: centroid.x + D * 0.7,  y: centroid.y + D * 0.7 },// bottom-right
+        { x: centroid.x - D * 0.7,  y: centroid.y + D * 0.7 },// bottom-left
+    ];
+    for (const pos of candidates) {
+        if (isPointInPolygon(pos.x, pos.y, area.points)) return pos;
+    }
+    return centroid; // fallback (same as JP)
+}

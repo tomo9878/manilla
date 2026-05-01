@@ -510,9 +510,12 @@ export function useGameState() {
         const area = mapData.find(a => a.name === areaName);
         if (!area) return;
         const center = getCentroid(area.points);
+        const divPaused = currentEvent?.type === 'Pause' && currentEvent?.target &&
+            getDivision(unit) === { '1C': '1st', '37': '37th', '11': '11th' }[currentEvent.target];
+        const recoveryStatus = divPaused ? 'spent' : 'fresh';
         setSupplyPoints(p => p - cost);
         setUnits(prev => prev.map(u => u.id === unitId ? {
-            ...u, status: 'fresh', location: areaName,
+            ...u, status: recoveryStatus, location: areaName,
             x: center.x - UNIT_SIZE / 2, y: center.y - UNIT_SIZE / 2,
         } : u));
         setContextMenu(null);

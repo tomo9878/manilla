@@ -23,6 +23,7 @@ export function resolveCombat({
     defenseValue,
     baseDefenseValue = null,
     terrainMod = null,
+    avBreakdown = [],
     isElite = false,
     hasAirSupport = false,
     terrainType = null,
@@ -32,7 +33,9 @@ export function resolveCombat({
     const [d1, d2] = [d6(), d6()];
     const atRoll  = d1 + d2;
     const atTotal = attackValue + atRoll;
-    logs.push(`  米軍攻撃: 攻撃値 ${attackValue} + ダイス ${atRoll} (${d1}+${d2}) = ${atTotal}`);
+    logs.push('米軍攻撃:');
+    for (const line of avBreakdown) logs.push(line);
+    logs.push(`  合計AV: ${attackValue} + ダイス ${atRoll} (${d1}+${d2}) = ${atTotal}`);
 
     let airReduction = 0;
     if (hasAirSupport) {

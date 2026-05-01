@@ -14,21 +14,24 @@ export function calculateCombatStats({
     eventCiviActive = false,
 }) {
     const logs = [];
+    const avBreakdown = [];
     let av = 0;
     let dv = 0;
 
     // ── AV ────────────────────────────────────────────────
     const leadUnit = attackerUnits.find(u => u.is_lead) ?? attackerUnits[0] ?? null;
-    if (!leadUnit) return { av: 0, dv: 0, logs: ['攻撃部隊なし'] };
+    if (!leadUnit) return { av: 0, dv: 0, avBreakdown: [], logs: ['攻撃部隊なし'] };
 
     const baseAv = leadUnit.attack_factor ?? 2;
     av += baseAv;
     logs.push(`攻撃値 基本値 (先導: ${unitLabel(leadUnit)}): ${baseAv}`);
+    avBreakdown.push(`  リード: ${unitLabel(leadUnit)} (AF${baseAv})`);
 
     const additionalCount = attackerUnits.length - 1;
     if (additionalCount > 0) {
         av += additionalCount;
         logs.push(`攻撃値 追加部隊 (+${additionalCount}): 計 ${attackerUnits.length} 部隊`);
+        avBreakdown.push(`  追加部隊: +${additionalCount} (${additionalCount}部隊)`);
     }
 
     const artyCount = supportModifiers.artillery ?? 0;
@@ -36,8 +39,13 @@ export function calculateCombatStats({
     const totalSupport = artyCount + engCount;
 
     av += artyCount + engCount * 2;
-    if (totalSupport > 0) {
-        logs.push(`攻撃値 支援: 砲兵 x${artyCount} (+${artyCount}), 工兵 x${engCount} (+${engCount * 2})`);
+    if (artyCount > 0) {
+        logs.push(`攻撃値 支援: 砲兵 x${artyCount} (+${artyCount})`);
+        avBreakdown.push(`  砲兵支援: +${artyCount} (${artyCount}個)`);
+    }
+    if (engCount > 0) {
+        logs.push(`攻撃値 支援: 工兵 x${engCount} (+${engCount * 2})`);
+        avBreakdown.push(`  工兵支援: +${engCount * 2} (${engCount}個)`);
     }
 
     // Combined Arms (Tank + Infantry + Support)
@@ -48,23 +56,27 @@ export function calculateCombatStats({
             if (engCount > 0) {
                 av += 1;
                 logs.push('攻撃値 諸兵科連合ボーナス (廃墟/工兵): +1');
+                avBreakdown.push('  諸兵科連合ボーナス (廃墟/工兵): +1');
             } else {
                 logs.push('諸兵科連合ボーナスなし: 市街地/要塞は工兵支援が必要');
             }
         } else {
             av += 1;
             logs.push('攻撃値 諸兵科連合ボーナス: +1');
+            avBreakdown.push('  諸兵科連合ボーナス: +1');
         }
     }
 
     if (morale >= 10) {
         av += 1;
         logs.push(`攻撃値 高士気 (${morale}): +1`);
+        avBreakdown.push('  強固士気ボーナス: +1');
     }
 
     if (eventCiviActive && isMandatoryAttack) {
         av -= 1;
         logs.push('攻撃値 ペナルティ (市民 & 強制攻撃): -1');
+        avBreakdown.push('  ペナルティ (市民 & 強制攻撃): -1');
     }
 
     // Mixed formation penalty (-1 per extra formation beyond first)
@@ -79,6 +91,7 @@ export function calculateCombatStats({
         const penalty = -(formations.size - 1);
         av += penalty;
         logs.push(`攻撃値 混成部隊ペナルティ: ${penalty} (混成: ${[...formations].join(', ')})`);
+        avBreakdown.push(`  混成部隊ペナルティ: ${penalty} (${[...formations].join(', ')})`);
     }
 
     // ── DV ────────────────────────────────────────────────
@@ -102,5 +115,5 @@ export function calculateCombatStats({
         logs.push('防御値 精鋭: 防御に3d6（最低値除外）を使用');
     }
 
-    return { av, dv, baseDv: baseDf, terrainMod: tMod, logs };
+    return { av, dv, baseDv: baseDf, terrainMod: tMod, avBreakdown, logs };
 }

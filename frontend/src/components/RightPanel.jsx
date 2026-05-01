@@ -38,7 +38,8 @@ const RightPanel = ({
             </div>
             <div style={{ background: '#333', padding: '10px', borderRadius: '4px' }}>
                 <div style={{ fontSize: '0.8rem', color: '#aaa' }}>米軍支配</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControlledAreas.length} / 34</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff9800' }}>{usControlledAreas.length} / 37</div>
+                <div style={{ fontSize: '0.75rem', color: '#aaa' }}>目標: 34以上</div>
             </div>
         </div>
 

@@ -183,12 +183,14 @@ const LeftPanel = ({
                 </button>
             )}
 
-            <button
-                onClick={handleEndPhase}
-                style={{ width: '100%', padding: '12px', background: '#0066cc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
-            >
-                フェーズ終了
-            </button>
+            {currentPhase === 'End' && (
+                <button
+                    onClick={handleEndPhase}
+                    style={{ width: '100%', padding: '12px', background: '#0066cc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}
+                >
+                    次のターンへ &gt;
+                </button>
+            )}
         </div>
 
         {/* セーブ・ロード */}

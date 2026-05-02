@@ -103,11 +103,10 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                 strategyLog += ' -> 狙撃 (効果なし、指揮官不在)。';
             }
         } else if (strategy === 'Barrage') {
-            if (newAttackers.length > 0) {
-                const target = newAttackers[newAttackers.length - 1]; // Last unit
-                strategyLog += ` -> 砲撃！部隊 ${unitLabel(target)} を除去 (行動不能)。`;
-                removedId = target.id;
-            }
+            // Player selects which unit to send OOA
+            addLog(`防衛戦略: 砲撃 -> 米軍ユニット1個をOOAへ（左のリストからクリックして選択）`, 'danger');
+            setStep('BARRAGE_SELECT');
+            return;
         } else if (strategy === 'Fanatic') {
             strategyLog += ' -> 狂信的！(成功 -> 膠着)';
         } else if (strategy === 'Elite') {
@@ -137,6 +136,26 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
             setCombatResult({ resultTypeActual: 'Repulse', logs: ['防衛戦略損害により戦闘終了。'] });
         } else {
             setTimeout(() => setStep('SETUP'), 1500);
+        }
+    };
+
+    const handleBarrageSelect = (unitId) => {
+        const target = activeAttackers.find(u => u.id === unitId);
+        if (!target) return;
+        const newAttackers = activeAttackers.filter(u => u.id !== unitId);
+        setStrategyCasualtyIds(prev => [...prev, unitId]);
+        if (onStrategyCasualty) onStrategyCasualty([unitId]);
+        if (unitId === selectedLeadId) {
+            setSelectedLeadId(newAttackers.length > 0 ? newAttackers[0].id : null);
+        }
+        setActiveAttackers(newAttackers);
+        addLog(`砲撃損害: ${unitLabel(target)} -> 行動不能`, 'danger');
+        if (newAttackers.length === 0) {
+            addLog('全攻撃部隊が防衛戦略により除去。', 'danger');
+            setStep('RESULT');
+            setCombatResult({ resultTypeActual: 'Repulse', logs: ['防衛戦略損害により戦闘終了。'] });
+        } else {
+            setTimeout(() => setStep('SETUP'), 500);
         }
     };
 
@@ -248,6 +267,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         switch (s) {
             case 'CONTACT': return '接敵 (Contact)';
             case 'STRATEGY': return '戦略 (Strategy)';
+            case 'BARRAGE_SELECT': return '砲撃損害選択';
             case 'SETUP': return '準備 (Setup)';
             case 'RESOLUTION': return '解決 (Resolution)';
             case 'RESULT': return '結果 (Result)';
@@ -281,12 +301,13 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                             {activeAttackers.map(u => (
                                 <div
                                     key={u.id}
-                                    className={`unit-card ${u.id === selectedLeadId ? 'lead' : ''} ${!participatingIds.has(u.id) ? 'inactive' : ''}`}
+                                    className={`unit-card ${u.id === selectedLeadId ? 'lead' : ''} ${!participatingIds.has(u.id) ? 'inactive' : ''} ${step === 'BARRAGE_SELECT' ? 'barrage-target' : ''}`}
                                     onClick={() => {
+                                        if (step === 'BARRAGE_SELECT') { handleBarrageSelect(u.id); return; }
                                         if (step === 'RESULT') return;
                                         if (participatingIds.has(u.id)) setSelectedLeadId(u.id);
                                     }}
-                                    style={{ cursor: step !== 'RESULT' ? 'pointer' : 'default', opacity: participatingIds.has(u.id) ? 1 : 0.5 }}
+                                    style={{ cursor: step === 'BARRAGE_SELECT' || step !== 'RESULT' ? 'pointer' : 'default', opacity: participatingIds.has(u.id) ? 1 : 0.5 }}
                                 >
                                     {/* Checkbox for Participation */}
                                     <div
@@ -376,6 +397,12 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                         )}
                         {step === 'STRATEGY' && (
                             <div style={{ color: 'yellow' }}>敵軍戦略発動中...</div>
+                        )}
+                        {step === 'BARRAGE_SELECT' && (
+                            <div style={{ color: '#ff9800', textAlign: 'center', padding: '8px' }}>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '8px' }}>💥 砲撃！</div>
+                                <div style={{ fontSize: '0.85rem' }}>左の米軍ユニットを<br/>クリックしてOOAへ</div>
+                            </div>
                         )}
                         {step === 'SETUP' && (
                             <button className="roll-btn" onClick={handleRoll} disabled={isRolling}>

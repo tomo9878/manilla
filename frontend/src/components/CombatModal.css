@@ -136,6 +136,12 @@
     background: rgba(236, 201, 75, 0.1);
 }
 
+.unit-card.barrage-target:hover {
+    border-color: #ff6b35;
+    background: rgba(255, 107, 53, 0.2);
+    box-shadow: 0 0 8px rgba(255, 107, 53, 0.5);
+}
+
 .unit-card.armor {
     border-left-color: #4fd1c5;
 }

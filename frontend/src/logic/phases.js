@@ -96,28 +96,36 @@ export function processSupplyRoll({ currentTurn, currentSupply }) {
 
 // ── Bloody Streets ────────────────────────────────────────
 
+// effect types: 'none' | 'ooa' | 'morale' | 'spent_all'
 export function processBloodyStreetsCheck({ areaData }) {
-    const results = [];
-    const logs = ['血の街路チェック中 (市街地/要塞 + 交戦エリア)...'];
+    const ooa_queue = [];   // requires player selection
+    const auto = [];        // applied immediately by caller
+    const logs = [];
 
     for (const area of areaData) {
-        const { terrain, us_count = 0, jp_count = 0 } = area;
+        const { terrain, us_count = 0, jp_count = 0, is_elite = false, us_unit_ids = [] } = area;
         if (!['Urban', 'Fort'].includes(terrain) || us_count === 0 || jp_count === 0) continue;
 
-        const roll = d6();
-        if (roll <= 2) {
-            logs.push(`血の街路 ${area.name}: ダイス ${roll} -> 効果なし`);
-        } else if (roll <= 4) {
-            logs.push(`血の街路 ${area.name}: ダイス ${roll} -> 米軍1部隊が行動不能！`);
-            results.push({ area: area.name, roll, effect: 'OOA', required_ooa: 1, morale_penalty: 0 });
+        const rawRoll = d6();
+        const roll = Math.min(6, rawRoll + (is_elite ? 1 : 0));
+        const eliteMark = is_elite ? ` (+1 精鋭修正、素値${rawRoll})` : '';
+
+        if (roll <= 3) {
+            logs.push(`流血の街路 - ${area.name}: ダイス${roll}${eliteMark} → 効果なし`);
+        } else if (roll === 4) {
+            logs.push(`流血の街路 - ${area.name}: ダイス${roll}${eliteMark} → 米軍ユニット1個をOOAへ`);
+            ooa_queue.push({ area: area.name, roll, effect: 'ooa', morale_penalty: 0 });
+        } else if (roll === 5) {
+            logs.push(`流血の街路 - ${area.name}: ダイス${roll}${eliteMark} → 士気 -1`);
+            auto.push({ area: area.name, roll, effect: 'morale', morale_penalty: 1, us_unit_ids });
         } else {
-            logs.push(`血の街路 ${area.name}: ダイス ${roll} -> 米軍1部隊が行動不能かつ士気 -1！`);
-            results.push({ area: area.name, roll, effect: 'OOA + 士気 -1', required_ooa: 1, morale_penalty: 1 });
+            logs.push(`流血の街路 - ${area.name}: ダイス${roll}${eliteMark} → 全米軍ユニット消耗 + 士気 -1`);
+            auto.push({ area: area.name, roll, effect: 'spent_all', morale_penalty: 1, us_unit_ids });
         }
     }
 
-    if (results.length === 0) logs.push('血の街路による損害なし。');
-    return { results, logs };
+    if (logs.length === 0) logs.push('流血の街路: 該当エリアなし。');
+    return { ooa_queue, auto, logs };
 }
 
 // ── End of Combat Phase ───────────────────────────────────

@@ -64,19 +64,14 @@ function App() {
                         padding: '20px', borderRadius: '8px', border: '2px solid red',
                         boxShadow: '0 0 20px rgba(255,0,0,0.5)', textAlign: 'center', maxWidth: '80%',
                     }}>
-                        <h2 style={{ margin: '0 0 10px 0', borderBottom: '1px solid #fff', color: '#ff3333' }}>BLOODY STREETS!</h2>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Area: {gs.bloodyStreetsQueue[0].area}</div>
+                        <h2 style={{ margin: '0 0 10px 0', borderBottom: '1px solid #fff', color: '#ff3333' }}>流血の街路！</h2>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{gs.bloodyStreetsQueue[0].area}</div>
                         <div style={{ margin: '10px 0', fontSize: '1rem' }}>
-                            Result: Rolled {gs.bloodyStreetsQueue[0].roll} ({gs.bloodyStreetsQueue[0].effect})
+                            ダイス {gs.bloodyStreetsQueue[0].roll} → 米軍ユニット1個をOOAへ
                         </div>
                         <div style={{ color: '#ffaaaa', fontWeight: 'bold' }}>
-                            ⚠ Select 1 US Unit in this area to take casualties (OOA).
+                            ⚠ マップ上の該当エリアの米軍ユニットをクリックして行動不能にしてください
                         </div>
-                        {gs.bloodyStreetsQueue[0].morale_penalty > 0 && (
-                            <div style={{ color: '#fa0', fontSize: '0.9rem', marginTop: '5px' }}>
-                                (Additional Consequence: Morale -{gs.bloodyStreetsQueue[0].morale_penalty})
-                            </div>
-                        )}
                     </div>
                 )}
 

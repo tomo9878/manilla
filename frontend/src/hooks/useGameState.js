@@ -273,16 +273,35 @@ export function useGameState() {
                 !['out_of_action', 'eliminated', 'wounded', 'future'].includes(u.status) &&
                 isPointInPolygon(u.x, u.y, area.points)
             );
+            const jpUnits  = areaUnits.filter(u => u.faction === 'JP');
+            const usUnits  = areaUnits.filter(u => u.faction !== 'JP');
             return {
                 name: area.name, terrain: area.terrain,
-                us_count: areaUnits.filter(u => u.faction !== 'JP').length,
-                jp_count: areaUnits.filter(u => u.faction === 'JP').length,
+                us_count: usUnits.length,
+                jp_count: jpUnits.length,
+                us_unit_ids: usUnits.map(u => u.id),
+                is_elite: jpUnits.some(u => u.unitClass === 'Elite'),
             };
         });
         const data = processBloodyStreetsCheck({ areaData });
-        if (data.results.length > 0) {
-            setBloodyStreetsQueue(data.results);
-            alert('⚠️ Bloody Streets detected! Resolve casualties before Combat Phase.');
+
+        if (data.logs.length > 0) alert('【流血の街路】\n' + data.logs.join('\n'));
+
+        // Apply automatic effects (roll 5 = morale-1, roll 6 = all-spent + morale-1)
+        let moraleChange = 0;
+        const spentIds = new Set();
+        for (const ev of data.auto) {
+            moraleChange += ev.morale_penalty;
+            if (ev.effect === 'spent_all') ev.us_unit_ids.forEach(id => spentIds.add(id));
+        }
+        if (moraleChange > 0) setMorale(p => p - moraleChange);
+        if (spentIds.size > 0) {
+            setUnits(prev => prev.map(u => spentIds.has(u.id) ? { ...u, status: 'spent' } : u));
+        }
+
+        // Queue OOA events (roll 4) for player selection
+        if (data.ooa_queue.length > 0) {
+            setBloodyStreetsQueue(data.ooa_queue);
         } else {
             setCurrentPhase('Combat');
         }
@@ -298,17 +317,16 @@ export function useGameState() {
         if (!event) return;
         const unit = units.find(u => u.id === unitId);
         if (!unit) return;
-        if (unit.faction === 'JP') { alert('Must select a US unit for casualties.'); return; }
+        if (unit.faction === 'JP') { alert('米軍ユニットを選択してください。'); return; }
         const area = mapData.find(a => a.name === event.area);
         if (!area || !isPointInPolygon(unit.x, unit.y, area.points)) {
-            alert(`Selected unit must be in ${event.area}!`); return;
+            alert(`${event.area} 内の米軍ユニットを選択してください。`); return;
         }
-        if (event.morale_penalty > 0) setMorale(p => p - event.morale_penalty);
         setUnits(prev => prev.map(u => u.id === unitId ? { ...u, status: 'out_of_action' } : u));
         const newQueue = bloodyStreetsQueue.slice(1);
         setBloodyStreetsQueue(newQueue);
         if (newQueue.length === 0) {
-            alert('Bloody Streets resolution complete. Beginning Combat Phase.');
+            alert('流血の街路の処理完了。戦闘フェーズを開始します。');
             setCurrentPhase('Combat');
         }
     };

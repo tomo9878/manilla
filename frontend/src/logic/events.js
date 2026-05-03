@@ -19,7 +19,7 @@ const EVENT_TABLE = [
         ja_name: '建武集団・攻勢',
         type: 'Japanese Offensive',
         target: null,
-        effect_desc: '建武集団が組織的反撃を実施。OOA状態の第44戦車大隊のシャーマン1両につき士気-1。',
+        effect_desc: '建武集団が組織的反撃を実施。このターンの補給ダイスが 4d6 → 2d6 に減少。',
     },
     {
         total: [5, 6],

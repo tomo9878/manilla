@@ -219,12 +219,11 @@ export function useGameState() {
 
     const handleEventPhase = () => {
         const data = processRandomEvent({
-            currentTurn: turn, units, morale, lastEvent,
+            currentTurn: turn, lastEvent,
             usControlledTags: getUsControlledTags(),
         });
         setCurrentEvent(data.event);
         setLastEvent(data.event);
-        if (data.morale !== morale) setMorale(data.morale);
 
         // Pause イベント: 対象師団の全ユニットを消耗状態に
         if (data.event.type === 'Pause' && data.event.target) {
@@ -252,7 +251,7 @@ export function useGameState() {
     const handleProceedToSupply = () => setCurrentPhase('Supply');
 
     const handleSupplyRoll = () => {
-        const data = processSupplyRoll({ currentTurn: turn, currentSupply: supplyPoints });
+        const data = processSupplyRoll({ currentTurn: turn, currentSupply: supplyPoints, currentEvent });
         setSupplyPoints(data.new_total);
         setSupplyRolled(true);
         if (data.logs.length > 0) alert('補給結果:\n' + data.logs.join('\n'));

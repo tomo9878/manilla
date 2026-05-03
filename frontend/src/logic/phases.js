@@ -77,10 +77,15 @@ export function processDawnPhase({ currentTurn, units, morale }) {
 
 // ── Supply Phase ──────────────────────────────────────────
 
-export function processSupplyRoll({ currentTurn, currentSupply }) {
-    const rolls = [d6(), d6(), d6(), d6()];
+export function processSupplyRoll({ currentTurn, currentSupply, currentEvent }) {
+    const offensiveActive = ['Kembu Group Offensive', 'Shimbu Group Offensive'].includes(currentEvent?.name);
+    const numDice = offensiveActive ? 2 : 4;
+    const rolls = Array.from({ length: numDice }, d6);
     const totalRoll = rolls.reduce((a, b) => a + b, 0);
-    const logs = [`補給ダイス (4d6): ${rolls.join('+')} = ${totalRoll}`];
+    const logs = offensiveActive
+        ? [`イベント効果（${currentEvent.ja_name}）: 補給ダイス 4d6 → 2d6`]
+        : [];
+    logs.push(`補給ダイス (${numDice}d6): ${rolls.join('+')} = ${totalRoll}`);
 
     let added = totalRoll;
     if (currentTurn === 1 && totalRoll < 12) {

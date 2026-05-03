@@ -97,7 +97,7 @@ function lookupEvent(total) {
     return { ...NO_RESULT };
 }
 
-export function processRandomEvent({ currentTurn, lastEvent, usControlledTags, units, morale }) {
+export function processRandomEvent({ currentTurn, lastEvent, usControlledTags }) {
     const logs = [`--- ランダムイベント・フェーズ (ターン ${currentTurn}) ---`];
 
     const rolls = [d6(), d6(), d6()];
@@ -132,22 +132,12 @@ export function processRandomEvent({ currentTurn, lastEvent, usControlledTags, u
         }
     }
 
-    let moraleChange = 0;
-    // Kembu/Shimbu Offensive: morale penalty for 44th Tank units in OOA
     if (['Kembu Group Offensive', 'Shimbu Group Offensive'].includes(event.name)) {
-        const ooaCount = units.filter(u =>
-            u.id.includes('44') && u.name.includes('Sherman') && u.status === 'out_of_action'
-        ).length;
-        if (ooaCount > 0) {
-            morale -= ooaCount;
-            moraleChange = -ooaCount;
-            logs.push(`攻勢効果: 第44戦車 OOA x${ooaCount} → 士気-${ooaCount} (現在 ${morale})`);
-        }
+        logs.push(`攻勢効果: このターンの補給ダイスが 4d6 → 2d6 に減少`);
     }
 
     return {
-        event: { name: event.name, ja_name: event.ja_name, type: event.type, target: event.target, effect_desc: event.effect_desc, roll: total, rolls, moraleChange },
-        morale,
+        event: { name: event.name, ja_name: event.ja_name, type: event.type, target: event.target, effect_desc: event.effect_desc, roll: total, rolls },
         logs,
     };
 }

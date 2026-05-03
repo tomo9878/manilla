@@ -263,8 +263,8 @@ export function useGameState() {
             setIwabuchiPending(true);
         }
 
-        // 剣武集団・突破作戦: 第44戦車大隊を撤退させる
-        if (data.event.name === 'Kembu Group Breakout') {
+        // 建武・振武集団・突破作戦: 第44戦車大隊を撤退させる
+        if (['Kembu Group Breakout', 'Shimbu Group Breakout'].includes(data.event.name)) {
             const KEMBU_IDS = new Set(['1C_44A', '1C_44B', '1C_44D']);
             const returnArea = usControlledAreas.includes('Area 2') ? 'Area 2' : 'Area 1';
             const ooaPenalty = units.filter(u => KEMBU_IDS.has(u.id) && u.status === 'out_of_action').length;

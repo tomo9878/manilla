@@ -8,18 +8,18 @@ const EVENT_TABLE = [
     {
         total: 3,
         name: 'Kembu Group Breakout',
-        ja_name: '剣武集団・突破作戦',
+        ja_name: '建武集団・突破作戦',
         type: 'Japanese Attack',
         target: null,
-        effect_desc: '日本軍剣武集団が突破を敢行。第44戦車大隊が撤退（翌ターンArea 1/2に帰還）。OOA中の場合は撤退不可→士気-1。ターン6-9は4として扱う。',
+        effect_desc: '日本軍建武集団が突破を敢行。第44戦車大隊が撤退（翌ターンArea 1/2に帰還）。OOA中の場合は撤退不可→士気-1。ターン6-9は4として扱う。',
     },
     {
         total: 4,
         name: 'Kembu Group Offensive',
-        ja_name: '剣武集団・攻勢',
+        ja_name: '建武集団・攻勢',
         type: 'Japanese Offensive',
         target: null,
-        effect_desc: '剣武集団が組織的反撃を実施。OOA状態の第44戦車大隊のシャーマン1両につき士気-1。',
+        effect_desc: '建武集団が組織的反撃を実施。OOA状態の第44戦車大隊のシャーマン1両につき士気-1。',
     },
     {
         total: [5, 6],
@@ -107,7 +107,7 @@ export function processRandomEvent({ currentTurn, lastEvent, usControlledTags })
     // Turn 6-9: roll of 3 treated as 4 (Kembu Group Offensive)
     const effectiveTotal = (total === 3 && currentTurn >= 6 && currentTurn <= 9) ? 4 : total;
     if (effectiveTotal !== total) {
-        logs.push(`ルール (ターン${currentTurn}): ダイス3 → 4 として処理 (剣武集団・攻勢)`);
+        logs.push(`ルール (ターン${currentTurn}): ダイス3 → 4 として処理 (建武集団・攻勢)`);
     }
 
     let event = lookupEvent(effectiveTotal);

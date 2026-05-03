@@ -11,7 +11,7 @@ const EVENT_TABLE = [
         ja_name: '剣武集団・突破作戦',
         type: 'Japanese Attack',
         target: null,
-        effect_desc: '日本軍剣武集団が突破を敢行。米軍攻撃部隊の先導ユニット1部隊が行動不能（OOA）になる。',
+        effect_desc: '日本軍剣武集団が突破を敢行。第44戦車大隊が撤退（翌ターンArea 1/2に帰還）。OOA中の場合は撤退不可→士気-1。ターン6-9は4として扱う。',
     },
     {
         total: 4,
@@ -104,7 +104,13 @@ export function processRandomEvent({ currentTurn, lastEvent, usControlledTags })
     const total = rolls.reduce((a, b) => a + b, 0);
     logs.push(`3d6: ${rolls.join('+')} = ${total}`);
 
-    let event = lookupEvent(total);
+    // Turn 6-9: roll of 3 treated as 4 (Kembu Group Offensive)
+    const effectiveTotal = (total === 3 && currentTurn >= 6 && currentTurn <= 9) ? 4 : total;
+    if (effectiveTotal !== total) {
+        logs.push(`ルール (ターン${currentTurn}): ダイス3 → 4 として処理 (剣武集団・攻勢)`);
+    }
+
+    let event = lookupEvent(effectiveTotal);
     logs.push(`初期結果: ${event.ja_name}`);
 
     // Pause events invalid on Turn 1 and 9

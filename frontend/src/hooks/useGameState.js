@@ -184,8 +184,26 @@ export function useGameState() {
     };
 
     const handleDawnPhase = () => {
-        const data = processDawnPhase({ currentTurn: turn, units, morale });
-        if (data.logs.length > 0) alert('夜明けフェーズ報告:\n' + data.logs.join('\n'));
+        // 第44戦車帰還処理 (Kembu Breakout 翌ターン)
+        const kembuReturning = units.filter(u => u.kembuReturnTurn && u.kembuReturnTurn <= turn);
+        let preUnits = units;
+        const kembuLogs = [];
+        if (kembuReturning.length > 0) {
+            preUnits = units.map(u => {
+                if (!u.kembuReturnTurn || u.kembuReturnTurn > turn) return u;
+                const returnArea = u.kembuReturnArea ?? 'Area 2';
+                const area = mapData.find(a => a.name === returnArea);
+                const center = area ? getCentroid(area.points) : { x: 2800, y: 500 };
+                kembuLogs.push(`第44戦車帰還: ${u.name} → ${returnArea}`);
+                return { ...u, status: 'fresh', location: returnArea,
+                    x: center.x - UNIT_SIZE / 2, y: center.y - UNIT_SIZE / 2,
+                    kembuReturnTurn: undefined, kembuReturnArea: undefined };
+            });
+        }
+
+        const data = processDawnPhase({ currentTurn: turn, units: preUnits, morale });
+        const allLogs = [...kembuLogs, ...data.logs];
+        if (allLogs.length > 0) alert('夜明けフェーズ報告:\n' + allLogs.join('\n'));
         setUnits(data.units);
         setMorale(data.morale);
         const arriving = data.units.filter(u => u.status === 'arriving');
@@ -243,6 +261,19 @@ export function useGameState() {
         // 岩淵突破命令: 発動時はエリア選択待ちへ
         if (data.event.name === 'Iwabuchi Orders Breakout' && data.event.iwabuchiActive) {
             setIwabuchiPending(true);
+        }
+
+        // 剣武集団・突破作戦: 第44戦車大隊を撤退させる
+        if (data.event.name === 'Kembu Group Breakout') {
+            const KEMBU_IDS = new Set(['1C_44A', '1C_44B', '1C_44D']);
+            const returnArea = usControlledAreas.includes('Area 2') ? 'Area 2' : 'Area 1';
+            const ooaPenalty = units.filter(u => KEMBU_IDS.has(u.id) && u.status === 'out_of_action').length;
+            setUnits(prev => prev.map(u => {
+                if (!KEMBU_IDS.has(u.id)) return u;
+                if (['out_of_action', 'eliminated', 'future'].includes(u.status)) return u;
+                return { ...u, status: 'future', kembuReturnTurn: turn + 1, kembuReturnArea: returnArea };
+            }));
+            if (ooaPenalty > 0) setMorale(p => p - ooaPenalty);
         }
 
         setEventNotification({ event: data.event, logs: data.logs });

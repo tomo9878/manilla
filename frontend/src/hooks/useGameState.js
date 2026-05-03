@@ -34,6 +34,8 @@ export function useGameState() {
     const [currentEvent, setCurrentEvent] = useState(null);
     const [lastEvent, setLastEvent] = useState(null);
     const [bloodyStreetsQueue, setBloodyStreetsQueue] = useState([]);
+    const [iwabuchiPending, setIwabuchiPending] = useState(false);
+    const [jpReserve, setJpReserve] = useState({ Clear: [], Urban: [], Fort: [] });
 
     // ── Movement / Impulse ────────────────────────────────
     const [selectedUnitId, setSelectedUnitId] = useState(null);
@@ -171,6 +173,7 @@ export function useGameState() {
         });
 
         setUnits(newUnits);
+        setJpReserve({ Clear: [...pools.Clear], Urban: [...pools.Urban], Fort: [...pools.Fort] });
         setTurn(1);
         setCurrentPhase('Dawn');
         setMorale(19);
@@ -236,6 +239,11 @@ export function useGameState() {
                 }
                 return u;
             }));
+        }
+
+        // 岩淵突破命令: 発動時はエリア選択待ちへ
+        if (data.event.name === 'Iwabuchi Orders Breakout' && data.event.iwabuchiActive) {
+            setIwabuchiPending(true);
         }
 
         setEventNotification({ event: data.event, logs: data.logs });
@@ -329,6 +337,70 @@ export function useGameState() {
             alert('流血の街路の処理完了。戦闘フェーズを開始します。');
             setCurrentPhase('Combat');
         }
+    };
+
+    // Iwabuchi Breakout: US-controlled Urban/Fort areas adjacent to JP-controlled areas
+    const iwabuchiTargetAreas = iwabuchiPending
+        ? mapData
+            .filter(area => {
+                if (!['Urban', 'Fort'].includes(area.terrain)) return false;
+                if (!usControlledAreas.includes(area.name)) return false;
+                const adj = adjacencyData[area.name] ?? [];
+                return adj.some(n => !usControlledAreas.includes(n));
+            })
+            .map(a => a.name)
+        : [];
+
+    const handleIwabuchiAreaSelect = (areaName) => {
+        const area = mapData.find(a => a.name === areaName);
+        if (!area) return;
+
+        const areaUsUnits = units.filter(u =>
+            u.faction === 'US' &&
+            u.location === areaName &&
+            !['out_of_action', 'eliminated', 'future'].includes(u.status)
+        );
+
+        const adj = adjacencyData[areaName] ?? [];
+        const retreatDest = adj.find(n => usControlledAreas.includes(n));
+
+        // Pick random JP reserve unit matching terrain
+        const terrain = area.terrain;
+        const pool = [...(jpReserve[terrain] ?? [])];
+        let jpUnit = null;
+        if (pool.length > 0) {
+            const idx = Math.floor(Math.random() * pool.length);
+            [jpUnit] = pool.splice(idx, 1);
+            setJpReserve(prev => ({ ...prev, [terrain]: pool }));
+        }
+
+        const center = getCentroid(area.points);
+
+        setUnits(prev => {
+            let next = prev.map(u => {
+                if (!areaUsUnits.some(au => au.id === u.id)) return u;
+                if (retreatDest) {
+                    const destArea = mapData.find(a => a.name === retreatDest);
+                    const destCenter = destArea ? getCentroid(destArea.points) : center;
+                    return { ...u, status: 'spent', location: retreatDest, x: destCenter.x - UNIT_SIZE / 2, y: destCenter.y - UNIT_SIZE / 2 };
+                }
+                return { ...u, status: 'out_of_action' };
+            });
+            if (jpUnit) {
+                next = [...next, {
+                    ...jpUnit,
+                    x: center.x - UNIT_SIZE / 2,
+                    y: center.y - UNIT_SIZE / 2,
+                    status: 'hidden',
+                    faction: 'JP',
+                    location: areaName,
+                }];
+            }
+            return next;
+        });
+
+        setUsControlledAreas(prev => prev.filter(n => n !== areaName));
+        setIwabuchiPending(false);
     };
 
     const handleEndPhase = () => {
@@ -677,6 +749,7 @@ export function useGameState() {
         turn, currentPhase,
         currentEvent, lastEvent,
         bloodyStreetsQueue,
+        iwabuchiPending, iwabuchiTargetAreas,
         selectedUnitId, movementOptions,
         morale, supplyPoints, supplyRolled, hasBeenShaken, supportUnits,
         showCombatModal, setShowCombatModal,
@@ -690,7 +763,7 @@ export function useGameState() {
         handleStartGame,
         handleDawnPhase, handleEventPhase, handleProceedToSupply,
         handleSupplyRoll, handleImproveMorale, handleProceedToAction,
-        handleEndTurn, handleProceedToCombat, handleBloodyStreetsSelection,
+        handleEndTurn, handleProceedToCombat, handleBloodyStreetsSelection, handleIwabuchiAreaSelect,
         handleEndPhase,
         handleUnitReveal, handleCombatInitiation, handleCombatApply, handleStrategyCasualty,
         handleUnitClick, handleUnitDblClick, handleDeselect,

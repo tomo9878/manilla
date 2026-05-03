@@ -124,6 +124,11 @@ export function processRandomEvent({ currentTurn, lastEvent, usControlledTags, u
         if (!usControlledTags.includes('Urban') && !usControlledTags.includes('Fort')) {
             logs.push('ルール 6.2.1: 米軍が都市・要塞エリアを支配していないため無効 → イベントなし');
             event = { ...NO_RESULT };
+        } else {
+            const subRoll = d6();
+            const active = subRoll >= 5;
+            event = { ...event, iwabuchiRoll: subRoll, iwabuchiActive: active };
+            logs.push(`岩淵提督・突破命令！ダイス: ${subRoll} → ${active ? '発動！対象エリア選択待ち...' : '効果なし'}`);
         }
     }
 

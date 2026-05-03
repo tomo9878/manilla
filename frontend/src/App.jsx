@@ -56,6 +56,41 @@ function App() {
             {/* CENTER PANEL */}
             <div style={{ flex: '0 0 60%', position: 'relative', background: '#333', overflow: 'hidden' }}>
 
+                {/* Iwabuchi Breakout banner */}
+                {gs.iwabuchiPending && (
+                    <div style={{
+                        position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)',
+                        zIndex: 500, background: 'rgba(60,0,60,0.95)', color: 'white',
+                        padding: '20px', borderRadius: '8px', border: '2px solid #ff00ff',
+                        boxShadow: '0 0 20px rgba(255,0,255,0.5)', textAlign: 'center', maxWidth: '80%',
+                    }}>
+                        <h2 style={{ margin: '0 0 10px 0', borderBottom: '1px solid #fff', color: '#ff88ff' }}>岩淵提督・突破命令！</h2>
+                        <div style={{ margin: '10px 0', fontSize: '1rem', color: '#ffccff' }}>
+                            米軍支配のUrban/Fortエリアで日本軍エリアに隣接している場所を1つ選択してください
+                        </div>
+                        {gs.iwabuchiTargetAreas.length > 0 ? (
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '12px' }}>
+                                {gs.iwabuchiTargetAreas.map(area => (
+                                    <button
+                                        key={area}
+                                        onClick={() => gs.handleIwabuchiAreaSelect(area)}
+                                        style={{ padding: '10px 16px', background: '#7b0099', color: 'white', border: '2px solid #ff00ff', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem' }}
+                                    >
+                                        {area}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ color: '#ffaaaa', marginTop: '10px' }}>
+                                対象エリアなし（マップ上に該当するエリアがありません）
+                            </div>
+                        )}
+                        <div style={{ color: '#ffaaff', fontWeight: 'bold', marginTop: '12px', fontSize: '0.9rem' }}>
+                            ⚠ マップ上の紫ハイライトエリアをクリックしても選択できます
+                        </div>
+                    </div>
+                )}
+
                 {/* Bloody Streets banner */}
                 {gs.bloodyStreetsQueue.length > 0 && (
                     <div style={{
@@ -123,6 +158,7 @@ function App() {
                             if (gs.movementOptions.includes(area.name)) { fill = 'rgba(0,255,0,0.4)'; stroke = '#00ff00'; strokeWidth = 4; }
                             if (gs.validRecoveryAreas.includes(area.name)) { fill = 'rgba(0,100,255,0.3)'; stroke = 'cyan'; }
                             if (gs.contestedAreas.includes(area.name)) { stroke = 'red'; strokeWidth = 4; }
+                            if (gs.iwabuchiTargetAreas.includes(area.name)) { fill = 'rgba(200,0,200,0.3)'; stroke = '#ff00ff'; strokeWidth = 5; }
 
                             return (
                                 <Line
@@ -135,7 +171,9 @@ function App() {
                                     onClick={e => {
                                         gs.setSelectedArea(area);
                                         if (e.evt.button === 2) { gs.handleAreaContextMenu(e, area.name); return; }
-                                        if (gs.selectedUnitId && gs.movementOptions.includes(area.name)) {
+                                        if (gs.iwabuchiPending && gs.iwabuchiTargetAreas.includes(area.name)) {
+                                            gs.handleIwabuchiAreaSelect(area.name);
+                                        } else if (gs.selectedUnitId && gs.movementOptions.includes(area.name)) {
                                             gs.handleMoveSelect(area.name);
                                         } else if (gs.currentPhase === 'Combat') {
                                             gs.handleCombatInitiation(area.name);

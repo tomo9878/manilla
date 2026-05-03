@@ -18,7 +18,7 @@ import { unitLabel } from '../logic/unitNames';
  * - morale: number
  * - currentTurn: number (NEW)
  */
-const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerUnits = [], defenderUnit, terrain = 'Clear', morale = 19, currentTurn = 1, supportUnits = {} }) => {
+const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerUnits = [], defenderUnit, terrain = 'Clear', morale = 19, currentTurn = 1, supportUnits = {}, currentEvent = null }) => {
     // Steps: 'CONTACT' -> 'STRATEGY' -> 'SETUP' -> 'RESOLUTION' -> 'RESULT'
     const [step, setStep] = useState('CONTACT');
 
@@ -30,6 +30,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
 
     // Modifiers
     const [support, setSupport] = useState({ artillery: 0, engineer: 0, air_support: false });
+    const [isMandatory, setIsMandatory] = useState(false);
 
     // Calculation & Result
     const [calculatedStats, setCalculatedStats] = useState({ av: 0, dv: 0, logs: [] });
@@ -54,7 +55,7 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
         if (step === 'SETUP' && selectedLeadId && activeAttackers.length > 0) {
             recalculate();
         }
-    }, [step, selectedLeadId, participatingIds, support, activeAttackers]);
+    }, [step, selectedLeadId, participatingIds, support, activeAttackers, isMandatory]);
 
     const addLog = (msg, type = 'info') => {
         setCombatLogs(prev => [...prev, { msg, type }]);
@@ -189,8 +190,8 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
                 defense_factor: defenderUnit.strength ?? 3,
                 is_elite: defenderUnit.unitClass === 'Elite',
             } : null,
-            isMandatoryAttack: false,
-            eventCiviActive: false,
+            isMandatoryAttack: isMandatory,
+            eventCiviActive: currentEvent?.name === 'Civilians and Refugees',
         });
         setCalculatedStats(data);
     };
@@ -340,6 +341,21 @@ const CombatModal = ({ onClose, onApply, onReveal, onStrategyCasualty, attackerU
 
                         {(step === 'SETUP' || step === 'RESULT') && (
                             <>
+                                {/* Civilians & Refugees event: mandatory attack toggle */}
+                                {currentEvent?.name === 'Civilians and Refugees' && (
+                                    <div style={{ background: 'rgba(142,68,173,0.2)', border: '1px solid #8e44ad', borderRadius: 6, padding: '8px 10px', marginBottom: 8 }}>
+                                        <div style={{ fontSize: '0.75rem', color: '#c39bd3', marginBottom: 4 }}>⚠ 市民と避難民イベント発動中</div>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.85rem', color: '#e2e8f0' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={isMandatory}
+                                                onChange={e => setIsMandatory(e.target.checked)}
+                                                disabled={step === 'RESULT'}
+                                            />
+                                            強制攻撃 (AV -1)
+                                        </label>
+                                    </div>
+                                )}
                                 <div className="section-title">支援 (最大 {participatingIds.size})</div>
                                 {/* Mixed Formation Warning */}
                                 {calculatedStats.logs.some(l => l.includes("Parent Formation Penalty")) && (

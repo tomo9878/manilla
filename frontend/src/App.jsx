@@ -310,6 +310,7 @@ function App() {
                     terrain={gs.combatData.terrain}
                     morale={gs.morale}
                     supportUnits={gs.supportUnits}
+                    currentEvent={gs.currentEvent}
                 />
             )}
 
